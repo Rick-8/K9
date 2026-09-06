@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block title %}Order Tracking | K9 Project{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 bg-white">
+                <div class="card-header bg-dark text-white d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                    <div>
+                        <h2 class="h5 mb-0">Master Order Tracking</h2>
+                        <small class="text-white-50">Active orders are shown by default</small>
+                    </div>
+                </div>
+
+                <!-- Search and filters -->
+                <div class="card-body border-bottom bg-light">
+                    <form method="GET" id="orderFilterForm" class="row g-3 align-items-end">
+                        <div class="col-12 col-lg-5">
+                            <label for="orderSearch" class="form-label small fw-bold text-muted">Search all orders</label>
+                            <div class="input-group">
+                                <input
+                                    type="search"
+                                    class="form-control"
+                                    id="orderSearch"
+                                    name="q"
+                                    value="{{ search_query }}"
+                                    placeholder="Reference, customer, email, phone or tracking #"
+                                    autocomplete="off"
+                                >
+                                <button class="btn btn-dark" type="submit">Search</button>
+                            </div>
+                            <small class="text-muted">Search includes Pending, Processing, Sent and Cancelled orders.</small>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <label for="statusFilter" class="form-label small fw-bold text-muted">Status filter</label>
+                            <select class="form-select" id="statusFilter" name="status">
+                                {% if show_closed %}
+                                    <option value="" {% if not status_filter or status_filter == 'active' %}selected{% endif %}>All statuses</option>
+                                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="processing" {% if status_filter == 'processing' %}selected{% endif %}>Processing</option>
+                                    <option value="sent" {% if status_filter == 'sent' %}selected{% endif %}>Sent / Complete</option>
+                                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                                {% else %}
+                                    <option value="active" {% if not status_filter or status_filter == 'active' %}selected{% endif %}>Pending + Processing</option>
+                                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                                    <option value="processing" {% if status_filter == 'processing' %}selected{% endif %}>Processing</option>
+                                {% endif %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-lg-2">
+                            <div class="form-check form-switch mb-2">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    role="switch"
+                                    id="showClosedSwitch"
+                                    name="show_closed"
+                                    value="1"
+                                    {% if show_closed %}checked{% endif %}
+                                >
+                                <label class="form-check-label fw-semibold" for="showClosedSwitch">
+                                    Show closed orders
+                                </label>
+                            </div>
+                            <small class="text-muted">Sent + Cancelled</small>
+                        </div>
+
+                        <div class="col-12 col-lg-2 d-grid gap-2 d-sm-flex d-lg-grid">
+                            <button class="btn btn-outline-dark" type="submit">Apply Filters</button>
+                            <a href="{% url 'order_dashboard' %}" class="btn btn-outline-secondary">Reset</a>
+                        </div>
+                    </form>
+
+                    <!-- Status summary -->
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <span class="badge rounded-pill bg-warning text-dark">Pending: {{ status_counts.pending }}</span>
+                        <span class="badge rounded-pill bg-info text-dark">Processing: {{ status_counts.processing }}</span>
+                        <span class="badge rounded-pill bg-success">Sent: {{ status_counts.sent }}</span>
+                        <span class="badge rounded-pill bg-danger">Cancelled: {{ status_counts.cancelled }}</span>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ref #</th>
+                                    <th>Date</th>
+                                    <th>Customer</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr {% if order.status == 'cancelled' %}class="table-danger"{% elif order.status == 'sent' %}class="table-light text-muted"{% endif %}>
+                                    <td class="fw-bold">{{ order.reference_number }}</td>
+                                    <td>{{ order.created_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="fw-semibold">{{ order.customer_name }}</div>
+                                        <small class="text-muted">{{ order.customer_email }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ order.get_order_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        {% if order.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif order.status == 'processing' %}
+                                            <span class="badge bg-info text-dark">Processing</span>
+                                        {% elif order.status == 'sent' %}
+                                            <span class="badge bg-success">Sent / Complete</span>
+                                        {% elif order.status == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelled</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ order.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{% url 'order_detail' order.reference_number %}" class="btn btn-sm btn-outline-dark">
+                                            View Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-5">
+                                        <div class="fw-semibold mb-1">No orders found.</div>
+                                        <small>Try changing the search or filters.</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-white text-muted small d-flex justify-content-between align-items-center">
+                    <span>{{ orders|length }} order{{ orders|length|pluralize }} shown</span>
+                    {% if search_query %}
+                        <span>Search checks all order statuses</span>
+                    {% elif not show_closed %}
+                        <span>Sent and cancelled orders are hidden</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterForm = document.getElementById('orderFilterForm');
+    const showClosedSwitch = document.getElementById('showClosedSwitch');
+    const statusFilter = document.getElementById('statusFilter');
+
+    if (showClosedSwitch && filterForm) {
+        showClosedSwitch.addEventListener('change', function () {
+            // Turning the switch on means show every status.
+            // Turning it off returns to the active work queue.
+            if (statusFilter) {
+                statusFilter.value = this.checked ? '' : 'active';
+            }
+
+            // requestSubmit() behaves like clicking the Apply button and
+            // preserves normal browser form handling.
+            if (typeof filterForm.requestSubmit === 'function') {
+                filterForm.requestSubmit();
+            } else {
+                filterForm.submit();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

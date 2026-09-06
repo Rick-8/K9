@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In | K9 Project{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0 p-4">
+            <h1 class="h3 fw-bold text-dark text-center mb-4">Sign In to K9</h1>
+            <form method="POST" action="{% url 'account_login' %}">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <div class="d-grid gap-2 mt-4">
+                    <button class="btn btn-dark btn-lg" type="submit">Sign In</button>
+                </div>
+            </form>
+            <p class="text-center text-muted mt-3 mb-0">
+                Don't have an account? <a href="{% url 'account_signup' %}" class="text-dark fw-bold">Register here</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

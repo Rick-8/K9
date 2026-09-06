@@ -1,43 +1,45 @@
-{% extends 'home/base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}Welcome | K9 Project{% endblock %}
+{% block title %}K9 | Handmade & Bespoke Gifts{% endblock %}
 
 {% block content %}
+<!-- Hero Section -->
 <div class="row align-items-center py-5">
-    <div class="col-lg-7 mx-auto text-center">
-        <h1 class="display-4 fw-bold text-dark mb-3">Welcome to the K9 Project</h1>
+    <div class="col-lg-8 mx-auto text-center">
+        <h1 class="display-4 fw-bold text-dark mb-3">Unique Handmade & Bespoke Gifts</h1>
         <p class="lead text-secondary mb-4">
-            Your full-stack Django application is up and running with a secure PostgreSQL database, Bootstrap styling, and a clean template layout structure.
+            Welcome to K9 — your destination for beautifully crafted handmade gifts and custom, one-of-a-kind bespoke creations made to order.
         </p>
         <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-            <a href="#" class="btn btn-primary btn-lg px-4 gap-3">Get Started</a>
-            <a href="#" class="btn btn-outline-secondary btn-lg px-4">Documentation</a>
+            <a href="#" class="btn btn-dark btn-lg px-4 gap-3">Shop Collection</a>
+            <a href="{% url 'bespoke_request' %}" class="btn btn-outline-dark btn-lg px-4">Request Bespoke Item</a>
         </div>
     </div>
 </div>
 
+<!-- Feature Cards Section -->
 <div class="row g-4 py-5 row-cols-1 row-cols-md-3 text-center">
     <div class="col">
         <div class="card h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h3 class="card-title h5">Secure Backend</h3>
-                <p class="card-text text-muted">Powered by Django and connected securely to your cloud database via environment variables.</p>
+            <div class="card-body p-4">
+                <h3 class="card-title h5 fw-bold text-dark">Handcrafted Quality</h3>
+                <p class="card-text text-muted">Every item in our collection is carefully handcrafted with meticulous attention to detail and premium materials.</p>
             </div>
         </div>
     </div>
     <div class="col">
         <div class="card h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h3 class="card-title h5">Responsive UI</h3>
-                <p class="card-text text-muted">Designed using Bootstrap 5 components for a clean, mobile-ready layout out of the box.</p>
+            <div class="card-body p-4">
+                <h3 class="card-title h5 fw-bold text-dark">Bespoke & Custom</h3>
+                <p class="card-text text-muted">Have a specific vision in mind? We specialize in creating custom, tailor-made pieces designed just for you.</p>
             </div>
         </div>
     </div>
     <div class="col">
         <div class="card h-100 shadow-sm border-0">
-            <div class="card-body">
-                <h3 class="card-title h5">Scalable Architecture</h3>
-                <p class="card-text text-muted">Structured with modular apps and base templates ready for future features and media storage.</p>
+            <div class="card-body p-4">
+                <h3 class="card-title h5 fw-bold text-dark">Made with Love</h3>
+                <p class="card-text text-muted">From thoughtful keepsakes to unique statement pieces, our gifts bring a personal touch to every occasion.</p>
             </div>
         </div>
     </div>

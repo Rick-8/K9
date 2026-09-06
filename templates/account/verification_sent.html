@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify Your Email | K9 Project{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-6 col-lg-5 text-center">
+        <div class="card shadow-sm border-0 p-4">
+            <h1 class="h3 fw-bold text-dark mb-3">Verify Your Email Address</h1>
+            <p class="text-muted mb-4">
+                We have sent an e-mail to you for verification. Please check your inbox and click the link provided to activate your account.
+            </p>
+            <a href="{% url 'home' %}" class="btn btn-dark">Return Home</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
