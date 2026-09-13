@@ -179,7 +179,7 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-
+STATIC_ROOT = BASE_DIR / "staticfiles"
 # ---------------------------------------------------------------------
 # EMAIL
 # Django 6.1 MAILERS configuration

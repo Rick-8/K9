@@ -1,0 +1,32 @@
+/* Custom styles for K9 Project */
+body {
+    background-color: #f8f9fa;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+/* Navbar Logo Overhang Styling */
+.navbar-brand-container {
+    position: relative;
+    height: 40px; /* Locks the navbar layout height */
+}
+
+.navbar-logo {
+    position: absolute;
+    top: -6px; /* Adjusts top placement for the smaller size */
+    left: 0;
+    height: 45px; /* Reduced to make the logo smaller and proportionate */
+    width: auto;
+    z-index: 1030; /* Keeps it layered above the navbar background */
+}
+
+/* Adds breathing room to the left of the navbar text to match the smaller logo width */
+.navbar-brand-custom {
+    padding-left: 50px; 
+}
