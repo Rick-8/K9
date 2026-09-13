@@ -1,23 +1,388 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load static %}
 
-{% block title %}Register | K9 Project{% endblock %}
+{% block title %}Create Your Account | K9{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/signup.css' %}">
+{% endblock %}
+
 
 {% block content %}
-<div class="row justify-content-center py-5">
-    <div class="col-md-6 col-lg-5">
-        <div class="card shadow-sm border-0 p-4">
-            <h1 class="h3 fw-bold text-dark text-center mb-4">Create an Account</h1>
-            <form method="POST" action="{% url 'account_signup' %}">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <div class="d-grid gap-2 mt-4">
-                    <button class="btn btn-dark btn-lg" type="submit">Register</button>
-                </div>
-            </form>
-            <p class="text-center text-muted mt-3 mb-0">
-                Already have an account? <a href="{% url 'account_login' %}" class="text-dark fw-bold">Sign In</a>
+
+<main class="signup-page">
+
+    <div class="signup-orb signup-orb-one"></div>
+    <div class="signup-orb signup-orb-two"></div>
+
+    <section class="signup-card">
+
+        <header class="signup-header">
+
+            <img
+                src="{% static 'media/logo-I.png' %}"
+                alt="K9"
+                class="signup-logo"
+            >
+
+            <p class="signup-eyebrow">
+                JOIN K9
             </p>
+
+        </header>
+
+
+        <div class="signup-progress-info">
+
+            <span id="stepLabel">
+                Step 1 of 4
+            </span>
+
+            <span id="progressLabel">
+                25%
+            </span>
+
         </div>
-    </div>
-</div>
+
+
+        <div class="signup-progress-track">
+
+            <div
+                id="signupProgress"
+                class="signup-progress-bar">
+            </div>
+
+        </div>
+
+
+        <form
+            method="post"
+            action="{% url 'account_signup' %}"
+            id="signupForm"
+            novalidate>
+
+            {% csrf_token %}
+
+
+            {% if form.non_field_errors %}
+
+                <div class="signup-global-error">
+
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- =====================================================
+                 STEP 1 - USERNAME
+                 ===================================================== -->
+
+            <section
+                class="signup-step active"
+                data-step="0">
+
+                <span class="step-number">
+                    01
+                </span>
+
+                <h1>
+                    What should we call you?
+                </h1>
+
+                <p class="step-description">
+                    Choose a username for your K9 account.
+                </p>
+
+
+                <div class="signup-field">
+
+                    <label for="{{ form.username.id_for_label }}">
+                        Username
+                    </label>
+
+                    {{ form.username }}
+
+                    <div
+                        class="client-error"
+                        aria-live="polite">
+                    </div>
+
+
+                    {% if form.username.errors %}
+
+                        <div class="server-error">
+
+                            {% for error in form.username.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+                 STEP 2 - EMAIL
+                 ===================================================== -->
+
+            <section
+                class="signup-step"
+                data-step="1">
+
+                <span class="step-number">
+                    02
+                </span>
+
+                <h1>
+                    Where can we reach you?
+                </h1>
+
+                <p class="step-description">
+                    We'll use this for account information
+                    and order updates.
+                </p>
+
+
+                <div class="signup-field">
+
+                    <label for="{{ form.email.id_for_label }}">
+                        Email address
+                    </label>
+
+                    {{ form.email }}
+
+                    <div
+                        class="client-error"
+                        aria-live="polite">
+                    </div>
+
+
+                    {% if form.email.errors %}
+
+                        <div class="server-error">
+
+                            {% for error in form.email.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+                 STEP 3 - PASSWORD
+                 ===================================================== -->
+
+            <section
+                class="signup-step"
+                data-step="2">
+
+                <span class="step-number">
+                    03
+                </span>
+
+                <h1>
+                    Secure your account.
+                </h1>
+
+                <p class="step-description">
+                    Choose a strong password that only you know.
+                </p>
+
+
+                <div class="signup-field">
+
+                    <label for="{{ form.password1.id_for_label }}">
+                        Password
+                    </label>
+
+
+                    <div class="password-field">
+
+                        {{ form.password1 }}
+
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            data-target="{{ form.password1.id_for_label }}"
+                            aria-label="Show password">
+
+                            Show
+
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        class="client-error"
+                        aria-live="polite">
+                    </div>
+
+
+                    {% if form.password1.errors %}
+
+                        <div class="server-error">
+
+                            {% for error in form.password1.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+                 STEP 4 - CONFIRM PASSWORD
+                 ===================================================== -->
+
+            <section
+                class="signup-step"
+                data-step="3">
+
+                <span class="step-number">
+                    04
+                </span>
+
+                <h1>
+                    One last check.
+                </h1>
+
+                <p class="step-description">
+                    Enter your password again to make sure
+                    everything matches.
+                </p>
+
+
+                <div class="signup-field">
+
+                    <label for="{{ form.password2.id_for_label }}">
+                        Confirm password
+                    </label>
+
+
+                    <div class="password-field">
+
+                        {{ form.password2 }}
+
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            data-target="{{ form.password2.id_for_label }}"
+                            aria-label="Show password">
+
+                            Show
+
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        class="client-error"
+                        aria-live="polite">
+                    </div>
+
+
+                    {% if form.password2.errors %}
+
+                        <div class="server-error">
+
+                            {% for error in form.password2.errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </section>
+
+
+            <!-- =====================================================
+                 CONTROLS
+                 ===================================================== -->
+
+            <div class="signup-controls">
+
+                <button
+                    type="button"
+                    id="backButton"
+                    class="signup-button signup-button-back"
+                    hidden>
+
+                    <span>←</span>
+                    Back
+
+                </button>
+
+
+                <button
+                    type="button"
+                    id="nextButton"
+                    class="signup-button signup-button-next">
+
+                    Next
+                    <span>→</span>
+
+                </button>
+
+
+                <button
+                    type="submit"
+                    id="submitButton"
+                    class="signup-button signup-button-next"
+                    hidden>
+
+                    Create account
+                    <span>✓</span>
+
+                </button>
+
+            </div>
+
+        </form>
+
+
+        <footer class="signup-footer">
+
+            <span>
+                Already have an account?
+            </span>
+
+            <a href="{% url 'account_login' %}">
+                Sign in
+            </a>
+
+        </footer>
+
+    </section>
+
+</main>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="{% static 'js/signup.js' %}"></script>
 {% endblock %}

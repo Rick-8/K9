@@ -1,0 +1,295 @@
+{% load account %}
+{% user_display user as user_display %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify your K9 email address</title>
+</head>
+
+<body style="
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #212529;
+">
+
+    <table role="presentation"
+           width="100%"
+           cellspacing="0"
+           cellpadding="0"
+           border="0"
+           style="background-color: #f4f4f4; padding: 40px 15px;">
+
+        <tr>
+            <td align="center">
+
+                <!-- EMAIL CONTAINER -->
+                <table role="presentation"
+                       width="100%"
+                       cellspacing="0"
+                       cellpadding="0"
+                       border="0"
+                       style="
+                           max-width: 600px;
+                           background-color: #ffffff;
+                           border-radius: 16px;
+                           overflow: hidden;
+                           box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+                       ">
+
+                    <!-- HEADER -->
+                    <tr>
+                        <td align="center"
+                            style="
+                                background-color: #212529;
+                                padding: 35px 20px;
+                            ">
+
+                            <div style="
+                                display: inline-block;
+                                border: 2px solid #ffffff;
+                                border-radius: 14px;
+                                padding: 8px 18px;
+                                margin-bottom: 15px;
+                            ">
+                                <span style="
+                                    color: #ffffff;
+                                    font-size: 32px;
+                                    font-weight: 800;
+                                    letter-spacing: 3px;
+                                ">
+                                    K9
+                                </span>
+                            </div>
+
+                            <h1 style="
+                                color: #ffffff;
+                                margin: 5px 0 0;
+                                font-size: 27px;
+                                font-weight: 700;
+                            ">
+                                Welcome to K9
+                            </h1>
+
+                            <p style="
+                                color: #ced4da;
+                                margin: 10px 0 0;
+                                font-size: 15px;
+                            ">
+                                Bespoke & handmade gifts
+                            </p>
+
+                        </td>
+                    </tr>
+
+                    <!-- MAIN CONTENT -->
+                    <tr>
+                        <td style="padding: 40px 35px;">
+
+                            <h2 style="
+                                margin: 0 0 20px;
+                                font-size: 24px;
+                                color: #212529;
+                            ">
+                                Just one more step 👋
+                            </h2>
+
+                            <p style="
+                                margin: 0 0 18px;
+                                line-height: 1.7;
+                                font-size: 16px;
+                                color: #495057;
+                            ">
+                                Hi {{ user_display }},
+                            </p>
+
+                            <p style="
+                                margin: 0 0 18px;
+                                line-height: 1.7;
+                                font-size: 16px;
+                                color: #495057;
+                            ">
+                                Thanks for creating your K9 account.
+                            </p>
+
+                            <p style="
+                                margin: 0 0 30px;
+                                line-height: 1.7;
+                                font-size: 16px;
+                                color: #495057;
+                            ">
+                                Before you get started, we just need to make sure
+                                this email address belongs to you.
+                            </p>
+
+                            {% if code %}
+
+                                <!-- CODE VERIFICATION -->
+                                <p style="
+                                    text-align: center;
+                                    margin-bottom: 12px;
+                                    color: #6c757d;
+                                    font-size: 14px;
+                                ">
+                                    Your verification code is:
+                                </p>
+
+                                <div style="
+                                    background-color: #f8f9fa;
+                                    border: 1px solid #dee2e6;
+                                    border-radius: 12px;
+                                    padding: 20px;
+                                    text-align: center;
+                                    font-size: 30px;
+                                    font-weight: bold;
+                                    letter-spacing: 8px;
+                                    color: #212529;
+                                    margin-bottom: 30px;
+                                ">
+                                    {{ code }}
+                                </div>
+
+                            {% else %}
+
+                                <!-- VERIFY BUTTON -->
+                                <table role="presentation"
+                                       cellspacing="0"
+                                       cellpadding="0"
+                                       border="0"
+                                       width="100%">
+
+                                    <tr>
+                                        <td align="center"
+                                            style="padding: 5px 0 35px;">
+
+                                            <a href="{{ activate_url }}"
+                                               style="
+                                                   display: inline-block;
+                                                   background-color: #212529;
+                                                   color: #ffffff;
+                                                   text-decoration: none;
+                                                   font-size: 16px;
+                                                   font-weight: bold;
+                                                   padding: 16px 32px;
+                                                   border-radius: 8px;
+                                                   letter-spacing: 0.3px;
+                                               ">
+                                                ✓ Verify Email Address
+                                            </a>
+
+                                        </td>
+                                    </tr>
+
+                                </table>
+
+                            {% endif %}
+
+                            <!-- INFO BOX -->
+                            <div style="
+                                background-color: #f8f9fa;
+                                border-left: 4px solid #212529;
+                                padding: 18px;
+                                border-radius: 6px;
+                                margin-bottom: 25px;
+                            ">
+
+                                <p style="
+                                    margin: 0;
+                                    line-height: 1.6;
+                                    color: #6c757d;
+                                    font-size: 14px;
+                                ">
+                                    🔒 <strong style="color:#343a40;">
+                                        Your security matters to us.
+                                    </strong>
+                                    <br>
+                                    This verification helps us make sure your
+                                    account and email address are protected.
+                                </p>
+
+                            </div>
+
+                            {% if not code %}
+
+                                <p style="
+                                    margin: 0 0 8px;
+                                    font-size: 13px;
+                                    line-height: 1.5;
+                                    color: #868e96;
+                                ">
+                                    If the button above doesn't work, copy and
+                                    paste this link into your browser:
+                                </p>
+
+                                <p style="
+                                    margin: 0;
+                                    font-size: 12px;
+                                    line-height: 1.5;
+                                    word-break: break-all;
+                                ">
+                                    <a href="{{ activate_url }}"
+                                       style="color: #495057;">
+                                        {{ activate_url }}
+                                    </a>
+                                </p>
+
+                            {% endif %}
+
+                        </td>
+                    </tr>
+
+                    <!-- FOOTER -->
+                    <tr>
+                        <td align="center"
+                            style="
+                                background-color: #f8f9fa;
+                                padding: 25px 30px;
+                                border-top: 1px solid #eeeeee;
+                            ">
+
+                            <p style="
+                                margin: 0 0 8px;
+                                color: #6c757d;
+                                font-size: 13px;
+                                line-height: 1.5;
+                            ">
+                                If you didn't create a K9 account,
+                                you can safely ignore this email.
+                            </p>
+
+                            <p style="
+                                margin: 0;
+                                color: #adb5bd;
+                                font-size: 12px;
+                            ">
+                                © K9 · Handmade with care
+                            </p>
+
+                        </td>
+                    </tr>
+
+                </table>
+
+                <!-- OUTSIDE FOOTER -->
+                <p style="
+                    margin: 20px 0 0;
+                    font-size: 11px;
+                    color: #adb5bd;
+                    text-align: center;
+                ">
+                    Sent by K9 · {{ current_site.domain }}
+                </p>
+
+            </td>
+        </tr>
+
+    </table>
+
+</body>
+
+</html>

@@ -1,0 +1,34 @@
+{% load account %}
+{% user_display user as user_display %}
+
+K9
+Bespoke & handmade gifts
+
+VERIFY YOUR EMAIL
+
+Hi {{ user_display }},
+
+You've requested another email verification for your K9 account.
+
+{% if code %}
+Your verification code is:
+
+{{ code }}
+
+Enter this code into the verification page you currently have open.
+
+{% else %}
+Please verify your email address by visiting:
+
+{{ activate_url }}
+
+{% endif %}
+We verify email addresses to help keep your K9 account secure.
+
+If you didn't request another verification email, you can safely
+ignore this message.
+
+Thanks,
+
+K9
+{{ current_site.domain }}

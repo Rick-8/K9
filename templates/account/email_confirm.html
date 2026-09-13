@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% load static %}
+{% load account %}
+
+{% block title %}
+    Verify Your Email | K9
+{% endblock %}
+
+
+{% block content %}
+
+<section class="py-5">
+    <div class="container">
+
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-9 col-lg-7 col-xl-6">
+
+                <div class="card border-0 shadow-lg rounded-4">
+
+                    <div class="card-body p-4 p-md-5 text-center">
+
+                        <!-- K9 Logo -->
+                        <div class="mb-4">
+                            <img
+                                src="{% static 'media/logo-I.png' %}"
+                                alt="K9 Logo"
+                                class="img-fluid"
+                                style="max-width: 130px;"
+                            >
+                        </div>
+
+
+                        {% if confirmation %}
+
+                            {% if can_confirm %}
+
+                                <!-- Success / Verify Icon -->
+                                <div
+                                    class="bg-dark text-white rounded-circle
+                                           d-inline-flex align-items-center
+                                           justify-content-center mb-4"
+                                    style="width: 75px; height: 75px;"
+                                >
+                                    <span class="fs-1 fw-bold">
+                                        ✓
+                                    </span>
+                                </div>
+
+
+                                <!-- Heading -->
+                                <h1 class="fw-bold mb-3">
+                                    Verify Your Email
+                                </h1>
+
+                                <p class="text-muted mb-4">
+                                    You're just one step away from completing
+                                    your K9 account.
+                                </p>
+
+
+                                <!-- Email Display -->
+                                <div class="bg-light border rounded-3 p-3 mb-4">
+
+                                    <p class="small text-muted mb-1">
+                                        Please confirm this email address:
+                                    </p>
+
+                                    <p class="fw-bold mb-0 text-break">
+                                        {{ confirmation.email_address.email }}
+                                    </p>
+
+                                </div>
+
+
+                                <p class="text-muted mb-4">
+                                    Click the button below to verify your email
+                                    address and activate your account.
+                                </p>
+
+
+                                <!-- Confirmation Form -->
+                                <form
+                                    method="post"
+                                    action="{% url 'account_confirm_email' confirmation.key %}"
+                                >
+
+                                    {% csrf_token %}
+
+                                    {{ redirect_field }}
+
+                                    <div class="d-grid gap-2">
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-dark btn-lg
+                                                   rounded-pill fw-semibold"
+                                        >
+                                            Verify My Email
+                                        </button>
+
+                                    </div>
+
+                                </form>
+
+
+                                <!-- Security Note -->
+                                <div class="mt-4">
+
+                                    <p class="small text-muted mb-0">
+                                        🔒 Your account information is
+                                        securely protected.
+                                    </p>
+
+                                </div>
+
+
+                            {% else %}
+
+                                <!-- Already Used Icon -->
+                                <div
+                                    class="bg-warning rounded-circle
+                                           d-inline-flex align-items-center
+                                           justify-content-center mb-4"
+                                    style="width: 75px; height: 75px;"
+                                >
+                                    <span class="fs-1 fw-bold">
+                                        !
+                                    </span>
+                                </div>
+
+
+                                <h1 class="fw-bold mb-3">
+                                    Email Already Confirmed
+                                </h1>
+
+                                <p class="text-muted mb-4">
+                                    This email address has already been
+                                    confirmed by another account.
+                                </p>
+
+
+                                <div class="d-grid">
+
+                                    <a
+                                        href="{% url 'account_login' %}"
+                                        class="btn btn-dark btn-lg
+                                               rounded-pill fw-semibold"
+                                    >
+                                        Go to Sign In
+                                    </a>
+
+                                </div>
+
+                            {% endif %}
+
+
+                        {% else %}
+
+                            <!-- Invalid / Expired Icon -->
+                            <div
+                                class="bg-danger text-white rounded-circle
+                                       d-inline-flex align-items-center
+                                       justify-content-center mb-4"
+                                style="width: 75px; height: 75px;"
+                            >
+                                <span class="fs-1 fw-bold">
+                                    !
+                                </span>
+                            </div>
+
+
+                            <h1 class="fw-bold mb-3">
+                                Verification Link Expired
+                            </h1>
+
+                            <p class="text-muted mb-3">
+                                This email verification link is no longer
+                                valid.
+                            </p>
+
+                            <p class="text-muted mb-4">
+                                It may have expired, already been used,
+                                or been replaced by a newer verification
+                                email.
+                            </p>
+
+
+                            <div class="bg-light border rounded-3 p-3 mb-4">
+
+                                <p class="small text-muted mb-0">
+                                    Sign in to your account and request a
+                                    new verification email.
+                                </p>
+
+                            </div>
+
+
+                            <div class="d-grid gap-2">
+
+                                <a
+                                    href="{% url 'account_login' %}"
+                                    class="btn btn-dark btn-lg
+                                           rounded-pill fw-semibold"
+                                >
+                                    Go to Sign In
+                                </a>
+
+                                <a
+                                    href="{% url 'account_email' %}"
+                                    class="btn btn-outline-dark
+                                           rounded-pill"
+                                >
+                                    Manage Email Address
+                                </a>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <!-- Footer -->
+                        <hr class="my-4">
+
+                        <p class="small text-muted mb-0">
+                            K9 Handmade Gifts
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+Welcome to K9
+{% endblock %}
+
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'css/signup.css' %}">
+{% endblock %}
+
+
+{% block content %}
+
+<main class="signup-page">
+
+    <div class="signup-orb signup-orb-one"></div>
+    <div class="signup-orb signup-orb-two"></div>
+
+
+    <section class="signup-card signup-complete">
+
+        <div class="complete-tick">
+            ✓
+        </div>
+
+
+        <p class="signup-eyebrow">
+            ACCOUNT CREATED
+        </p>
+
+
+        <h1>
+            Welcome to K9.
+        </h1>
+
+
+        <p class="complete-intro">
+
+            Thank you for creating your account.
+
+            You're all set.
+
+            What would you like to do next?
+
+        </p>
+
+
+        <div class="complete-options">
+
+
+            <!-- BESPOKE -->
+
+            <a
+                href="/bespoke/"
+                class="complete-option">
+
+                <span class="option-number">
+                    01
+                </span>
+
+
+                <div class="option-icon">
+                    ✦
+                </div>
+
+
+                <h2>
+                    Create Something Bespoke
+                </h2>
+
+
+                <p>
+                    Tell us what you have in mind
+                    and start your personalised request.
+                </p>
+
+
+                <span class="option-arrow">
+                    →
+                </span>
+
+            </a>
+
+
+            <!-- SHOP -->
+
+            <a
+                href=""
+                class="complete-option">
+
+                <span class="option-number">
+                    02
+                </span>
+
+
+                <div class="option-icon">
+                    ◇
+                </div>
+
+
+                <h2>
+                    Visit The Shop
+                </h2>
+
+
+                <p>
+                    Explore our collection of
+                    ready-made handmade items.
+                </p>
+
+
+                <span class="option-arrow">
+                    →
+                </span>
+
+            </a>
+
+
+        </div>
+
+    </section>
+
+</main>
+
+{% endblock %}

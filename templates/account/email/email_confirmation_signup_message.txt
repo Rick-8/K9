@@ -1,0 +1,29 @@
+{% load account %}
+{% user_display user as user_display %}
+
+Welcome to K9!
+
+Hi {{ user_display }},
+
+Thanks for creating your K9 account.
+
+Before you get started, we just need to verify your email address.
+
+{% if code %}
+Your verification code is:
+
+{{ code }}
+
+Enter this code in the verification page to continue.
+{% else %}
+Verify your email address by visiting:
+
+{{ activate_url }}
+{% endif %}
+
+If you didn't create a K9 account, you can safely ignore this email.
+
+Thanks,
+K9
+
+{{ current_site.domain }}

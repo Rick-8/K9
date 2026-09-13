@@ -16,12 +16,19 @@ from pathlib import Path
 import dj_database_url
 
 
-# Load env.py if it exists
+# ---------------------------------------------------------------------
+# LOAD ENVIRONMENT VARIABLES
+# ---------------------------------------------------------------------
+
+# Load env.py during local development if it exists.
 if os.path.isfile("env.py"):
     import env
 
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# ---------------------------------------------------------------------
+# BASE DIRECTORY
+# ---------------------------------------------------------------------
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -36,6 +43,7 @@ SECRET_KEY = os.getenv(
 
 DEBUG = os.environ.get("DEVELOPMENT", "False") == "True"
 
+
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
@@ -47,6 +55,7 @@ ALLOWED_HOSTS = [
 # ---------------------------------------------------------------------
 
 INSTALLED_APPS = [
+    # Django
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -62,9 +71,11 @@ INSTALLED_APPS = [
 
     # Local apps
     "home",
-    'bespoke',
-    'orders',
+    "bespoke",
+    "orders",
+    "shop",
 ]
+
 
 SITE_ID = 1
 
@@ -75,17 +86,27 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
+
     "django.middleware.common.CommonMiddleware",
+
     "django.middleware.csrf.CsrfViewMiddleware",
+
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+
     "django.contrib.messages.middleware.MessageMiddleware",
+
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 
-    # Django Allauth
+    # Required by Django Allauth
     "allauth.account.middleware.AccountMiddleware",
 ]
 
+
+# ---------------------------------------------------------------------
+# URL CONFIGURATION
+# ---------------------------------------------------------------------
 
 ROOT_URLCONF = "core.urls"
 
@@ -96,19 +117,28 @@ ROOT_URLCONF = "core.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+
+        "DIRS": [
+            BASE_DIR / "templates",
+        ],
+
+        "APP_DIRS": True,
+
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
+
+# ---------------------------------------------------------------------
+# WSGI
+# ---------------------------------------------------------------------
 
 WSGI_APPLICATION = "core.wsgi.application"
 
@@ -135,18 +165,21 @@ AUTH_PASSWORD_VALIDATORS = [
             "UserAttributeSimilarityValidator"
         ),
     },
+
     {
         "NAME": (
             "django.contrib.auth.password_validation."
             "MinimumLengthValidator"
         ),
     },
+
     {
         "NAME": (
             "django.contrib.auth.password_validation."
             "CommonPasswordValidator"
         ),
     },
+
     {
         "NAME": (
             "django.contrib.auth.password_validation."
@@ -157,7 +190,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # ---------------------------------------------------------------------
-# INTERNATIONALIZATION
+# INTERNATIONALISATION
 # ---------------------------------------------------------------------
 
 LANGUAGE_CODE = "en-gb"
@@ -173,13 +206,34 @@ USE_TZ = True
 # STATIC FILES
 # ---------------------------------------------------------------------
 
-STATIC_URL = "static/"
+# URL used when referring to static files.
+STATIC_URL = "/static/"
 
+
+# Main project static directory.
+#
+# Example:
+#
+# static/
+# ├── css/
+# │   └── style.css
+# ├── js/
+# └── media/
+#     └── logo-I.png
+#
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
+
+# Destination used by:
+#
+# python manage.py collectstatic
+#
+# Do NOT manually store your CSS/images in here.
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+
 # ---------------------------------------------------------------------
 # EMAIL
 # Django 6.1 MAILERS configuration
@@ -188,22 +242,98 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MAILERS = {
     "default": {
         "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+
         "OPTIONS": {
             "host": "smtp.gmail.com",
+
             "port": 587,
-            "username": os.environ.get("EMAIL_HOST_USER"),
-            "password": os.environ.get("EMAIL_HOST_PASSWORD"),
+
+            "username": os.environ.get(
+                "EMAIL_HOST_USER"
+            ),
+
+            "password": os.environ.get(
+                "EMAIL_HOST_PASSWORD"
+            ),
+
             "use_tls": True,
+
             "timeout": 10,
         },
     },
 }
+
 
 DEFAULT_FROM_EMAIL = os.environ.get(
     "EMAIL_HOST_USER",
     "donotreplyk61@gmail.com",
 )
 
-# Authentication Redirects
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+
+# ---------------------------------------------------------------------
+# DJANGO ALLAUTH
+# ---------------------------------------------------------------------
+
+# Fields displayed on the signup page.
+#
+# The * means the field is required.
+ACCOUNT_SIGNUP_FIELDS = [
+    "username*",
+    "email*",
+    "password1*",
+    "password2*",
+]
+
+
+# ---------------------------------------------------------------------
+# EMAIL VERIFICATION
+# ---------------------------------------------------------------------
+
+# Email verification is REQUIRED.
+# Users cannot log in until they have verified their email address.
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+
+
+# False = send the customer a clickable verification link.
+# True = send them a verification code instead.
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = False
+
+
+# Verification links expire after 3 days.
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
+
+
+# Automatically log the customer in after they successfully
+# verify their email address.
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+
+
+# Prefix used on Allauth emails.
+# Example:
+# [K9] Please Confirm Your Email Address
+ACCOUNT_EMAIL_SUBJECT_PREFIX = "[K9] "
+
+
+# After a normal uninterrupted signup.
+#
+# Note: when mandatory email verification is enabled, Allauth
+# interrupts the normal signup redirect and sends the customer
+# through the verification process first.
+ACCOUNT_SIGNUP_REDIRECT_URL = "signup_complete"
+
+
+# After successful email verification, send an authenticated
+# customer to our signup complete page.
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = "signup_complete"
+
+
+# ---------------------------------------------------------------------
+# AUTHENTICATION REDIRECTS
+# ---------------------------------------------------------------------
+
+# Where to send users after signing in.
+LOGIN_REDIRECT_URL = "/"
+
+
+# Where to send users after signing out.
+LOGOUT_REDIRECT_URL = "/"

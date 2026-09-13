@@ -8,32 +8,25 @@
         <div class="card shadow-sm border-0 p-4 p-md-5 bg-white">
             <h1 class="h3 fw-bold text-dark text-center mb-3">Request a Bespoke Creation</h1>
             <p class="text-muted text-center mb-4">
-                Have a unique vision in mind? Fill out the details below, and our artisans will review your request and get back to you with a custom quote.
+                Have a unique vision in mind? Fill out the details below, and our artisans will review your request and
+                get back to you with a custom quote.
             </p>
 
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
 
             <form method="POST">
                 {% csrf_token %}
-                
+
                 {% for field in form %}
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold text-dark">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.help_text %}
-                            <div class="form-text text-muted small">{{ field.help_text }}</div>
-                        {% endif %}
-                        {% for error in field.errors %}
-                            <div class="text-danger small mt-1">{{ error }}</div>
-                        {% endfor %}
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-dark">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                    <div class="form-text text-muted small">{{ field.help_text }}</div>
+                    {% endif %}
+                    {% for error in field.errors %}
+                    <div class="text-danger small mt-1">{{ error }}</div>
+                    {% endfor %}
+                </div>
                 {% endfor %}
 
                 <div class="d-grid gap-2 mt-4">

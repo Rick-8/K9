@@ -1,0 +1,269 @@
+/* ==========================================================
+   K9 GLOBAL PROMOTIONAL BANNER
+========================================================== */
+
+.promo-banner {
+    position: relative;
+    z-index: 10;
+
+    width: 100%;
+
+    min-height: 42px;
+
+    display: flex;
+    align-items: center;
+
+    overflow: hidden;
+
+    background:
+        linear-gradient(
+            90deg,
+            #111111 0%,
+            #2c2c2c 50%,
+            #111111 100%
+        );
+
+    color: #ffffff;
+
+    box-shadow:
+        0 2px 8px
+        rgba(0, 0, 0, 0.14);
+}
+
+
+/* Keep navbar and logo above page content */
+.site-header {
+    position: relative;
+    z-index: 20;
+}
+
+
+.promo-banner-inner {
+    width: 100%;
+    overflow: hidden;
+}
+
+
+.promo-banner-track {
+    display: flex;
+    align-items: center;
+
+    width: max-content;
+
+    will-change: transform;
+}
+
+
+.promo-banner-message {
+    min-width: 100vw;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 10px 45px;
+
+    white-space: nowrap;
+
+    font-size: 0.9rem;
+    font-weight: 700;
+
+    letter-spacing: 0.04em;
+}
+
+
+.promo-banner-message i {
+    color: #d8b56c;
+}
+
+
+
+/* ==========================================================
+   STATIC MODE
+========================================================== */
+
+.promo-banner.banner-static .promo-banner-track {
+    width: 100%;
+}
+
+
+.promo-banner.banner-static .promo-banner-message {
+    width: 100%;
+}
+
+
+.promo-banner.banner-static .promo-banner-message-copy {
+    display: none;
+}
+
+
+
+/* ==========================================================
+   SCROLL MODE
+========================================================== */
+
+.promo-banner.banner-scroll .promo-banner-track {
+    animation:
+        promoBannerScroll
+        18s
+        linear
+        infinite;
+}
+
+
+
+/* ==========================================================
+   FLASH MODE
+========================================================== */
+
+.promo-banner.banner-flash .promo-banner-track {
+    width: 100%;
+}
+
+
+.promo-banner.banner-flash .promo-banner-message:first-child {
+    width: 100%;
+
+    animation:
+        promoBannerFlash
+        1.5s
+        ease-in-out
+        infinite;
+}
+
+
+.promo-banner.banner-flash .promo-banner-message-copy {
+    display: none;
+}
+
+
+
+/* ==========================================================
+   SCROLL + FLASH MODE
+========================================================== */
+
+.promo-banner.banner-both .promo-banner-track {
+    animation:
+        promoBannerScroll
+        18s
+        linear
+        infinite;
+}
+
+
+.promo-banner.banner-both .promo-banner-message {
+    animation:
+        promoBannerFlash
+        1.5s
+        ease-in-out
+        infinite;
+}
+
+
+
+/* ==========================================================
+   ANIMATIONS
+========================================================== */
+
+@keyframes promoBannerScroll {
+
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(-50%);
+    }
+
+}
+
+
+@keyframes promoBannerFlash {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.45;
+    }
+
+}
+
+
+
+/* ==========================================================
+   INTERACTION
+========================================================== */
+
+.promo-banner:hover .promo-banner-track,
+.promo-banner:hover .promo-banner-message {
+    animation-play-state: paused;
+}
+
+
+
+/* ==========================================================
+   MOBILE
+========================================================== */
+
+@media (max-width: 767.98px) {
+
+    .promo-banner {
+        min-height: 38px;
+    }
+
+
+    .promo-banner-message {
+        min-width: 140vw;
+
+        padding:
+            9px
+            30px;
+
+        font-size: 0.76rem;
+    }
+
+
+    .promo-banner.banner-static .promo-banner-message,
+    .promo-banner.banner-flash .promo-banner-message:first-child {
+        min-width: 100vw;
+
+        white-space: normal;
+
+        text-align: center;
+    }
+
+}
+
+
+
+/* ==========================================================
+   REDUCED MOTION
+========================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .promo-banner-track,
+    .promo-banner-message {
+        animation: none !important;
+    }
+
+
+    .promo-banner-track {
+        width: 100%;
+    }
+
+
+    .promo-banner-message:first-child {
+        width: 100%;
+        min-width: 100%;
+    }
+
+
+    .promo-banner-message-copy {
+        display: none;
+    }
+
+}

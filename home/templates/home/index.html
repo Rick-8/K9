@@ -1,47 +1,1218 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load static %}
 
-{% block title %}K9 | Handmade & Bespoke Gifts{% endblock %}
+
+{% block title %}
+K9 | Handmade & Bespoke Gifts
+{% endblock %}
+
+
+{% block meta_description %}
+Discover handmade gifts, personalised creations and completely bespoke items from K9.
+{% endblock %}
+
+
+
+{% block extra_css %}
+
+<link
+    rel="stylesheet"
+    href="{% static 'css/home.css' %}">
+
+{% endblock %}
+
+
+
+{% block full_width_content %}
+
+
+<!-- =========================================================
+     HERO
+========================================================== -->
+<section class="k9-hero">
+
+
+    <!-- Decorative animated shapes -->
+    <div
+        class="hero-orb hero-orb-one"
+        aria-hidden="true">
+    </div>
+
+    <div
+        class="hero-orb hero-orb-two"
+        aria-hidden="true">
+    </div>
+
+    <div
+        class="hero-orb hero-orb-three"
+        aria-hidden="true">
+    </div>
+
+
+    <div class="container position-relative">
+
+        <div
+            class="
+                row
+                align-items-center
+                min-vh-hero
+                gy-5
+            ">
+
+
+            <!-- =================================================
+                 HERO TEXT
+            ================================================== -->
+            <div class="col-lg-7">
+
+                <div class="hero-content">
+
+
+                    <div class="hero-eyebrow mb-3">
+
+                        <i class="bi bi-heart-fill me-2"></i>
+
+                        Handmade • Personalised • Bespoke
+
+                    </div>
+
+
+
+                    <h1 class="hero-title">
+
+                        Gifts made to feel
+
+                        <span
+                            class="hero-changing-word"
+                            data-words="special,personal,unique,unforgettable">
+
+                            special
+
+                        </span>
+
+                    </h1>
+
+
+
+                    <p class="hero-description">
+
+                        Discover beautifully handmade gifts,
+                        ready-to-buy creations and completely
+                        bespoke pieces designed around your ideas.
+
+                    </p>
+
+
+
+                    <div
+                        class="
+                            d-flex
+                            flex-column
+                            flex-sm-row
+                            gap-3
+                            mt-4
+                        ">
+
+
+                        <a
+                            href="{% url 'shop:shop_home' %}"
+                            class="
+                                btn
+                                btn-dark
+                                btn-lg
+                                hero-btn
+                                js-ripple
+                            ">
+
+                            <i class="bi bi-bag-heart me-2"></i>
+
+                            Explore the Shop
+
+                            <i class="bi bi-arrow-right ms-2"></i>
+
+                        </a>
+
+
+
+                        <a
+                            href="{% url 'bespoke_request' %}"
+                            class="
+                                btn
+                                btn-outline-dark
+                                btn-lg
+                                hero-btn
+                                js-ripple
+                            ">
+
+                            <i class="bi bi-stars me-2"></i>
+
+                            Create Something Bespoke
+
+                        </a>
+
+                    </div>
+
+
+
+                    <!-- QUICK BENEFITS -->
+                    <div class="hero-benefits">
+
+
+                        <div class="hero-benefit">
+
+                            <i class="bi bi-brush"></i>
+
+                            <span>
+                                Handmade
+                            </span>
+
+                        </div>
+
+
+
+                        <div class="hero-benefit">
+
+                            <i class="bi bi-person-heart"></i>
+
+                            <span>
+                                Personalised
+                            </span>
+
+                        </div>
+
+
+
+                        <div class="hero-benefit">
+
+                            <i class="bi bi-gift"></i>
+
+                            <span>
+                                Made for giving
+                            </span>
+
+                        </div>
+
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 HERO SHOWCASE
+            ================================================== -->
+            <div class="col-lg-5">
+
+                <div
+                    class="
+                        hero-showcase
+                        js-tilt-card
+                    ">
+
+
+                    <div class="showcase-glow"></div>
+
+
+
+                    <div class="showcase-card">
+
+
+                        <div class="showcase-icon">
+
+                            <i class="bi bi-gift-fill"></i>
+
+                        </div>
+
+
+
+                        <span class="showcase-small">
+
+                            Welcome to
+
+                        </span>
+
+
+
+                        <div class="showcase-k9">
+
+                            K9
+
+                        </div>
+
+
+
+                        <h2 class="showcase-title">
+
+                            Something special,
+                            made differently.
+
+                        </h2>
+
+
+
+                        <p>
+
+                            Shop our handmade collection or tell
+                            us what you have in mind and let K9
+                            turn your idea into something unique.
+
+                        </p>
+
+
+
+                        <div class="showcase-tags">
+
+
+                            <span>
+
+                                <i class="bi bi-check-circle-fill"></i>
+
+                                Handmade
+
+                            </span>
+
+
+                            <span>
+
+                                <i class="bi bi-check-circle-fill"></i>
+
+                                Custom
+
+                            </span>
+
+
+                            <span>
+
+                                <i class="bi bi-check-circle-fill"></i>
+
+                                Unique
+
+                            </span>
+
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Floating mini cards -->
+                    <div
+                        class="
+                            floating-card
+                            floating-card-one
+                        ">
+
+                        <i class="bi bi-stars"></i>
+
+                        Bespoke
+
+                    </div>
+
+
+
+                    <div
+                        class="
+                            floating-card
+                            floating-card-two
+                        ">
+
+                        <i class="bi bi-heart-fill"></i>
+
+                        Personal
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             SCROLL INDICATOR
+        ================================================== -->
+        <button
+            type="button"
+            class="hero-scroll-button"
+            data-scroll-target="#discover-k9"
+            aria-label="Discover more">
+
+            <span>
+                Discover more
+            </span>
+
+            <i class="bi bi-chevron-down"></i>
+
+        </button>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================================================
+     QUICK USP BAR
+========================================================== -->
+<section class="k9-usp-bar">
+
+    <div class="container">
+
+        <div class="row g-0">
+
+
+            <div class="col-6 col-lg-3">
+
+                <div class="usp-item">
+
+                    <i class="bi bi-brush"></i>
+
+                    <div>
+
+                        <strong>
+                            Handmade
+                        </strong>
+
+                        <span>
+                            Crafted with care
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="col-6 col-lg-3">
+
+                <div class="usp-item">
+
+                    <i class="bi bi-stars"></i>
+
+                    <div>
+
+                        <strong>
+                            Bespoke
+                        </strong>
+
+                        <span>
+                            Your idea, your design
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="col-6 col-lg-3">
+
+                <div class="usp-item">
+
+                    <i class="bi bi-person-heart"></i>
+
+                    <div>
+
+                        <strong>
+                            Personal
+                        </strong>
+
+                        <span>
+                            Made to mean more
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="col-6 col-lg-3">
+
+                <div class="usp-item">
+
+                    <i class="bi bi-gift"></i>
+
+                    <div>
+
+                        <strong>
+                            Gift Ready
+                        </strong>
+
+                        <span>
+                            Something memorable
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+</section>
+
+
+{% endblock %}
+
+
 
 {% block content %}
-<!-- Hero Section -->
-<div class="row align-items-center py-5">
-    <div class="col-lg-8 mx-auto text-center">
-        <h1 class="display-4 fw-bold text-dark mb-3">Unique Handmade & Bespoke Gifts</h1>
-        <p class="lead text-secondary mb-4">
-            Welcome to K9 — your destination for beautifully crafted handmade gifts and custom, one-of-a-kind bespoke creations made to order.
-        </p>
-        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-            <a href="#" class="btn btn-dark btn-lg px-4 gap-3">Shop Collection</a>
-            <a href="{% url 'bespoke_request' %}" class="btn btn-outline-dark btn-lg px-4">Request Bespoke Item</a>
-        </div>
-    </div>
-</div>
 
-<!-- Feature Cards Section -->
-<div class="row g-4 py-5 row-cols-1 row-cols-md-3 text-center">
-    <div class="col">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-body p-4">
-                <h3 class="card-title h5 fw-bold text-dark">Handcrafted Quality</h3>
-                <p class="card-text text-muted">Every item in our collection is carefully handcrafted with meticulous attention to detail and premium materials.</p>
-            </div>
-        </div>
+
+<!-- =========================================================
+     DISCOVER K9
+========================================================== -->
+<section
+    id="discover-k9"
+    class="home-section">
+
+    <div
+        class="
+            section-heading
+            text-center
+            reveal
+        ">
+
+        <span class="section-eyebrow">
+            Discover K9
+        </span>
+
+        <h2>
+            How would you like to shop?
+        </h2>
+
+        <p>
+
+            Choose something from our growing collection,
+            or start with an idea and let us create
+            something especially for you.
+
+        </p>
+
     </div>
-    <div class="col">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-body p-4">
-                <h3 class="card-title h5 fw-bold text-dark">Bespoke & Custom</h3>
-                <p class="card-text text-muted">Have a specific vision in mind? We specialize in creating custom, tailor-made pieces designed just for you.</p>
-            </div>
+
+
+
+    <div class="row g-4 mt-2">
+
+
+        <!-- =================================================
+             SHOP
+        ================================================== -->
+        <div class="col-lg-6 reveal">
+
+            <a
+                href="{% url 'shop:shop_home' %}"
+                class="
+                    home-choice-card
+                    choice-shop
+                    js-tilt-card
+                ">
+
+
+                <div class="choice-background-icon">
+
+                    <i class="bi bi-bag-heart"></i>
+
+                </div>
+
+
+                <div class="choice-icon">
+
+                    <i class="bi bi-shop"></i>
+
+                </div>
+
+
+                <span class="choice-label">
+
+                    Ready to discover
+
+                </span>
+
+
+                <h3>
+
+                    Shop the Collection
+
+                </h3>
+
+
+                <p>
+
+                    Browse handmade and ready-to-order
+                    items, personalised gifts and unique
+                    K9 creations.
+
+                </p>
+
+
+                <span class="choice-link">
+
+                    Visit the Shop
+
+                    <i class="bi bi-arrow-right"></i>
+
+                </span>
+
+            </a>
+
         </div>
-    </div>
-    <div class="col">
-        <div class="card h-100 shadow-sm border-0">
-            <div class="card-body p-4">
-                <h3 class="card-title h5 fw-bold text-dark">Made with Love</h3>
-                <p class="card-text text-muted">From thoughtful keepsakes to unique statement pieces, our gifts bring a personal touch to every occasion.</p>
-            </div>
+
+
+
+        <!-- =================================================
+             BESPOKE
+        ================================================== -->
+        <div class="col-lg-6 reveal">
+
+            <a
+                href="{% url 'bespoke_request' %}"
+                class="
+                    home-choice-card
+                    choice-bespoke
+                    js-tilt-card
+                ">
+
+
+                <div class="choice-background-icon">
+
+                    <i class="bi bi-stars"></i>
+
+                </div>
+
+
+                <div class="choice-icon">
+
+                    <i class="bi bi-magic"></i>
+
+                </div>
+
+
+                <span class="choice-label">
+
+                    Have an idea?
+
+                </span>
+
+
+                <h3>
+
+                    Make It Bespoke
+
+                </h3>
+
+
+                <p>
+
+                    Tell us what you're imagining and
+                    we'll work with you to create
+                    something completely individual.
+
+                </p>
+
+
+                <span class="choice-link">
+
+                    Start a Bespoke Request
+
+                    <i class="bi bi-arrow-right"></i>
+
+                </span>
+
+            </a>
+
         </div>
+
+
     </div>
-</div>
+
+</section>
+
+
+
+<!-- =========================================================
+     WHY K9
+========================================================== -->
+<section class="home-section">
+
+
+    <div
+        class="
+            section-heading
+            text-center
+            reveal
+        ">
+
+        <span class="section-eyebrow">
+
+            Why K9?
+
+        </span>
+
+
+        <h2>
+
+            A little more personal.
+
+        </h2>
+
+
+        <p>
+
+            We believe a great gift should feel like it
+            was chosen for one person rather than everybody.
+
+        </p>
+
+    </div>
+
+
+
+    <div class="row g-4 mt-3">
+
+
+        <div class="col-md-4 reveal">
+
+            <article
+                class="
+                    feature-card
+                    js-tilt-card
+                ">
+
+
+                <div class="feature-number">
+                    01
+                </div>
+
+
+                <div class="feature-icon">
+
+                    <i class="bi bi-hand-index-thumb"></i>
+
+                </div>
+
+
+                <h3>
+
+                    Crafted by hand
+
+                </h3>
+
+
+                <p>
+
+                    Handmade products with character,
+                    detail and individuality that
+                    mass-produced items simply cannot replicate.
+
+                </p>
+
+            </article>
+
+        </div>
+
+
+
+        <div class="col-md-4 reveal">
+
+            <article
+                class="
+                    feature-card
+                    js-tilt-card
+                ">
+
+
+                <div class="feature-number">
+                    02
+                </div>
+
+
+                <div class="feature-icon">
+
+                    <i class="bi bi-pencil-square"></i>
+
+                </div>
+
+
+                <h3>
+
+                    Make it yours
+
+                </h3>
+
+
+                <p>
+
+                    Names, wording, themes and special ideas
+                    can transform a lovely item into something
+                    truly personal.
+
+                </p>
+
+            </article>
+
+        </div>
+
+
+
+        <div class="col-md-4 reveal">
+
+            <article
+                class="
+                    feature-card
+                    js-tilt-card
+                ">
+
+
+                <div class="feature-number">
+                    03
+                </div>
+
+
+                <div class="feature-icon">
+
+                    <i class="bi bi-chat-heart"></i>
+
+                </div>
+
+
+                <h3>
+
+                    Real collaboration
+
+                </h3>
+
+
+                <p>
+
+                    Bespoke creations begin with a
+                    conversation, allowing your ideas
+                    to become part of the design.
+
+                </p>
+
+            </article>
+
+        </div>
+
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================================================
+     HOW BESPOKE WORKS
+========================================================== -->
+<section
+    class="
+        home-section
+        bespoke-process-section
+    ">
+
+    <div
+        class="
+            row
+            align-items-center
+            gy-5
+        ">
+
+
+        <div class="col-lg-5 reveal">
+
+
+            <span class="section-eyebrow">
+
+                Your idea → reality
+
+            </span>
+
+
+            <h2 class="process-heading">
+
+                Bespoke doesn't need to be complicated.
+
+            </h2>
+
+
+            <p class="process-intro">
+
+                Our bespoke system guides you through
+                the process step by step, so you can
+                tell us what you want without facing
+                a giant intimidating form.
+
+            </p>
+
+
+            <a
+                href="{% url 'bespoke_request' %}"
+                class="
+                    btn
+                    btn-dark
+                    btn-lg
+                    mt-3
+                    js-ripple
+                ">
+
+                Start Your Design
+
+                <i class="bi bi-arrow-right ms-2"></i>
+
+            </a>
+
+        </div>
+
+
+
+        <div class="col-lg-7">
+
+            <div class="process-timeline">
+
+
+                <div class="process-step reveal">
+
+                    <div class="process-step-number">
+                        1
+                    </div>
+
+                    <div>
+
+                        <h3>
+                            Tell us your idea
+                        </h3>
+
+                        <p>
+
+                            Use the K9 bespoke wizard to
+                            explain what you'd like us
+                            to create.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="process-line"></div>
+
+
+
+                <div class="process-step reveal">
+
+                    <div class="process-step-number">
+                        2
+                    </div>
+
+                    <div>
+
+                        <h3>
+                            We work with you
+                        </h3>
+
+                        <p>
+
+                            Your request can be reviewed,
+                            discussed and refined before
+                            anything is finalised.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="process-line"></div>
+
+
+
+                <div class="process-step reveal">
+
+                    <div class="process-step-number">
+                        3
+                    </div>
+
+                    <div>
+
+                        <h3>
+                            We create it
+                        </h3>
+
+                        <p>
+
+                            Your final design becomes
+                            a genuinely individual K9 creation.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================================================
+     ACCOUNT / GUEST CHECKOUT
+========================================================== -->
+<section class="home-section">
+
+    <div class="account-promo reveal">
+
+
+        <div class="account-promo-decoration">
+
+            <i class="bi bi-person-heart"></i>
+
+        </div>
+
+
+
+        <div
+            class="
+                row
+                align-items-center
+                gy-4
+                position-relative
+            ">
+
+
+            <div class="col-lg-8">
+
+
+                <span class="section-eyebrow">
+
+                    Shopping made easy
+
+                </span>
+
+
+                <h2>
+
+                    No account?
+                    No problem.
+
+                </h2>
+
+
+                <p>
+
+                    K9 supports guest shopping, so
+                    creating an account will never
+                    stand between you and checkout.
+
+                </p>
+
+
+                <p class="mb-0">
+
+                    After your purchase you'll have
+                    the option to create an account
+                    so you can track orders and enjoy
+                    an easier experience next time.
+
+                </p>
+
+            </div>
+
+
+
+            <div class="col-lg-4 text-lg-end">
+
+
+                {% if user.is_authenticated %}
+
+                    <span class="account-status-pill">
+
+                        <i
+                            class="
+                                bi
+                                bi-check-circle-fill
+                                me-2
+                            ">
+                        </i>
+
+                        You're signed in
+
+                    </span>
+
+
+                {% else %}
+
+                    <a
+                        href="{% url 'account_signup' %}"
+                        class="
+                            btn
+                            btn-light
+                            btn-lg
+                            px-4
+                            js-ripple
+                        ">
+
+                        <i class="bi bi-person-plus me-2"></i>
+
+                        Create an Account
+
+                    </a>
+
+
+                    <div
+                        class="
+                            small
+                            mt-3
+                            account-helper-text
+                        ">
+
+                        Optional — guest checkout will
+                        still be available.
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- =========================================================
+     FINAL CTA
+========================================================== -->
+<section class="home-section pb-3">
+
+    <div class="final-cta reveal">
+
+
+        <div class="final-cta-glow"></div>
+
+
+
+        <div class="position-relative">
+
+
+            <div class="final-cta-icon">
+
+                <i class="bi bi-gift-fill"></i>
+
+            </div>
+
+
+            <h2>
+
+                Ready to find something special?
+
+            </h2>
+
+
+            <p>
+
+                Explore K9's handmade collection
+                or start creating something nobody
+                else has.
+
+            </p>
+
+
+
+            <div
+                class="
+                    d-flex
+                    flex-column
+                    flex-sm-row
+                    justify-content-center
+                    gap-3
+                    mt-4
+                ">
+
+
+                <a
+                    href="{% url 'shop:shop_home' %}"
+                    class="
+                        btn
+                        btn-light
+                        btn-lg
+                        px-4
+                        js-ripple
+                    ">
+
+                    <i class="bi bi-bag-heart me-2"></i>
+
+                    Shop K9
+
+                </a>
+
+
+
+                <a
+                    href="{% url 'bespoke_request' %}"
+                    class="
+                        btn
+                        btn-outline-light
+                        btn-lg
+                        px-4
+                        js-ripple
+                    ">
+
+                    <i class="bi bi-stars me-2"></i>
+
+                    Go Bespoke
+
+                </a>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+{% endblock %}
+
+
+
+{% block extra_js %}
+
+<script src="{% static 'js/home.js' %}"></script>
+
 {% endblock %}
