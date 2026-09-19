@@ -1,0 +1,1325 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bespoke Jobs | K9 Project{% endblock %}
+
+{% block content %}
+
+<style>
+    .k9-jobs-page {
+        --k9-dark: #212529;
+        --k9-soft: #f8f9fa;
+        --k9-border: #e5e7eb;
+        --k9-muted: #6c757d;
+    }
+
+    .k9-jobs-page .jobs-header {
+        background:
+            linear-gradient(
+                135deg,
+                #212529 0%,
+                #343a40 100%
+            );
+        border-radius: 1rem;
+        color: white;
+    }
+
+    .k9-jobs-page .stat-card,
+    .k9-jobs-page .job-card,
+    .k9-jobs-page .filter-card {
+        border: 1px solid var(--k9-border);
+        border-radius: 1rem;
+        box-shadow:
+            0 0.3rem 1.2rem
+            rgba(0, 0, 0, 0.045);
+    }
+
+    .k9-jobs-page .job-card {
+        transition:
+            transform 0.15s ease,
+            box-shadow 0.15s ease;
+    }
+
+    .k9-jobs-page .job-card:hover {
+        transform: translateY(-2px);
+        box-shadow:
+            0 0.6rem 1.5rem
+            rgba(0, 0, 0, 0.08);
+    }
+
+    .k9-jobs-page .small-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+        color: var(--k9-muted);
+    }
+
+    .k9-jobs-page .assignment-box {
+        background: var(--k9-soft);
+        border: 1px solid var(--k9-border);
+        border-radius: 0.8rem;
+    }
+
+    .k9-jobs-page .job-summary-box {
+        background: var(--k9-soft);
+        border-radius: 0.75rem;
+        padding: 1rem;
+    }
+</style>
+
+
+<div class="container py-4 k9-jobs-page">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div class="jobs-header shadow-sm p-4 p-lg-5 mb-4">
+
+        <div
+            class="
+                d-flex
+                flex-column
+                flex-lg-row
+                justify-content-between
+                align-items-lg-center
+                gap-3
+            "
+        >
+
+            <div>
+
+                <p
+                    class="
+                        text-uppercase
+                        text-white-50
+                        small
+                        fw-bold
+                        mb-2
+                    "
+                >
+                    K9 Staff Workspace
+                </p>
+
+                <h1 class="h2 fw-bold mb-2">
+
+                    {% if is_superuser_view %}
+                        Bespoke Jobs
+                    {% else %}
+                        My Bespoke Jobs
+                    {% endif %}
+
+                </h1>
+
+                <p class="text-white-50 mb-0">
+
+                    {% if is_superuser_view %}
+                        Manage bespoke work, staff assignments
+                        and workflow progress.
+                    {% else %}
+                        Your assigned bespoke jobs and current
+                        workload.
+                    {% endif %}
+
+                </p>
+
+            </div>
+
+
+            <div class="d-flex flex-wrap gap-2">
+
+                {% if is_superuser_view %}
+
+                    <a
+                        href="{% url 'order_dashboard' %}"
+                        class="btn btn-light"
+                    >
+                        All Orders
+                    </a>
+
+                {% else %}
+
+                    <span
+                        class="
+                            badge
+                            bg-light
+                            text-dark
+                            rounded-pill
+                            px-3
+                            py-2
+                        "
+                    >
+                        Assigned to you only
+                    </span>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         COUNTS
+    ====================================================== -->
+
+    <div class="row g-3 mb-4">
+
+        <!-- ACTIVE -->
+
+        <div class="col-6 col-md-4 col-xl">
+
+            <div class="card stat-card h-100">
+
+                <div class="card-body">
+
+                    <div class="small-label">
+
+                        {% if is_superuser_view %}
+                            Active
+                        {% else %}
+                            My Active
+                        {% endif %}
+
+                    </div>
+
+                    <div class="fs-3 fw-bold">
+                        {{ job_counts.active }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- SUPERUSER COUNTS -->
+
+        {% if is_superuser_view %}
+
+            <div class="col-6 col-md-4 col-xl">
+
+                <div class="card stat-card h-100">
+
+                    <div class="card-body">
+
+                        <div class="small-label">
+                            My Jobs
+                        </div>
+
+                        <div class="fs-3 fw-bold">
+                            {{ job_counts.mine }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-6 col-md-4 col-xl">
+
+                <div class="card stat-card h-100">
+
+                    <div class="card-body">
+
+                        <div class="small-label">
+                            Unassigned
+                        </div>
+
+                        <div class="fs-3 fw-bold">
+                            {{ job_counts.unassigned }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% endif %}
+
+
+        <!-- WAITING -->
+
+        <div class="col-6 col-md-4 col-xl">
+
+            <div class="card stat-card h-100">
+
+                <div class="card-body">
+
+                    <div class="small-label">
+                        Waiting
+                    </div>
+
+                    <div class="fs-3 fw-bold text-info">
+                        {{ job_counts.waiting }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- URGENT -->
+
+        <div class="col-6 col-md-4 col-xl">
+
+            <div class="card stat-card h-100">
+
+                <div class="card-body">
+
+                    <div class="small-label">
+                        Urgent
+                    </div>
+
+                    <div class="fs-3 fw-bold text-danger">
+                        {{ job_counts.urgent }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- COMPLETED -->
+
+        <div class="col-6 col-md-4 col-xl">
+
+            <div class="card stat-card h-100">
+
+                <div class="card-body">
+
+                    <div class="small-label">
+                        Completed
+                    </div>
+
+                    <div class="fs-3 fw-bold text-success">
+                        {{ job_counts.completed }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- CANCELLED -->
+
+        <div class="col-6 col-md-4 col-xl">
+
+            <div class="card stat-card h-100">
+
+                <div class="card-body">
+
+                    <div class="small-label">
+                        Cancelled
+                    </div>
+
+                    <div class="fs-3 fw-bold text-danger">
+                        {{ job_counts.cancelled }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         FILTERS
+    ====================================================== -->
+
+    <div class="card filter-card mb-4">
+
+        <div class="card-body p-4">
+
+            <form
+                method="GET"
+                id="bespokeFilterForm"
+                class="row g-3 align-items-end"
+            >
+
+                <!-- SEARCH -->
+
+                <div class="col-12 col-lg-4">
+
+                    <label
+                        for="jobSearch"
+                        class="form-label fw-semibold"
+                    >
+                        Search Jobs
+                    </label>
+
+                    <input
+                        type="search"
+                        id="jobSearch"
+                        name="q"
+                        value="{{ search_query }}"
+                        class="form-control"
+                        placeholder="Order, customer, bespoke ref, item..."
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+                <!-- STAGE -->
+
+                <div class="col-12 col-sm-6 col-lg-2">
+
+                    <label
+                        for="stageFilter"
+                        class="form-label fw-semibold"
+                    >
+                        Stage
+                    </label>
+
+                    <select
+                        id="stageFilter"
+                        name="stage"
+                        class="form-select"
+                    >
+
+                        <option value="">
+                            All stages
+                        </option>
+
+                        {% for value, label in stage_choices %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if stage_filter == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <!-- PRIORITY -->
+
+                <div class="col-12 col-sm-6 col-lg-2">
+
+                    <label
+                        for="priorityFilter"
+                        class="form-label fw-semibold"
+                    >
+                        Priority
+                    </label>
+
+                    <select
+                        id="priorityFilter"
+                        name="priority"
+                        class="form-select"
+                    >
+
+                        <option value="">
+                            All priorities
+                        </option>
+
+                        {% for value, label in priority_choices %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if priority_filter == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <!-- ASSIGNMENT FILTER -->
+
+                {% if is_superuser_view %}
+
+                    <div class="col-12 col-sm-6 col-lg-2">
+
+                        <label
+                            for="assignedFilter"
+                            class="form-label fw-semibold"
+                        >
+                            Assigned
+                        </label>
+
+                        <select
+                            id="assignedFilter"
+                            name="assigned"
+                            class="form-select"
+                        >
+
+                            <option value="">
+                                Everyone
+                            </option>
+
+                            <option
+                                value="mine"
+                                {% if assigned_filter == "mine" %}
+                                    selected
+                                {% endif %}
+                            >
+                                My Jobs
+                            </option>
+
+                            <option
+                                value="unassigned"
+                                {% if assigned_filter == "unassigned" %}
+                                    selected
+                                {% endif %}
+                            >
+                                Unassigned
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                {% endif %}
+
+
+                <!-- BUTTONS -->
+
+                <div
+                    class="
+                        col-12
+                        col-sm-6
+                        {% if is_superuser_view %}
+                            col-lg-2
+                        {% else %}
+                            col-lg-4
+                        {% endif %}
+                    "
+                >
+
+                    <div class="d-grid gap-2">
+
+                        <button
+                            type="submit"
+                            class="btn btn-dark"
+                        >
+                            Apply Filters
+                        </button>
+
+                        <a
+                            href="{% url 'bespoke_jobs_dashboard' %}"
+                            class="btn btn-outline-secondary"
+                        >
+                            Reset
+                        </a>
+
+                    </div>
+
+                </div>
+
+
+                <!-- CLOSED SWITCH -->
+
+                <div class="col-12">
+
+                    <hr class="my-2">
+
+                    <div
+                        class="
+                            d-flex
+                            flex-column
+                            flex-sm-row
+                            align-items-sm-center
+                            gap-2
+                        "
+                    >
+
+                        <div class="form-check form-switch mb-0">
+
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                id="showClosedSwitch"
+                                name="show_closed"
+                                value="1"
+                                {% if show_closed %}
+                                    checked
+                                {% endif %}
+                            >
+
+                            <label
+                                class="form-check-label fw-semibold"
+                                for="showClosedSwitch"
+                            >
+                                Include completed and cancelled jobs
+                            </label>
+
+                        </div>
+
+                        <small class="text-muted">
+                            Closed jobs are hidden by default.
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         JOB LIST
+    ====================================================== -->
+
+    {% if jobs %}
+
+        <div class="row g-4">
+
+            {% for job in jobs %}
+
+                <div class="col-12">
+
+                    <div class="card job-card overflow-hidden">
+
+                        <div class="card-body p-4">
+
+                            <div class="row g-4 align-items-center">
+
+                                <!-- =================================
+                                     JOB INFORMATION
+                                ================================== -->
+
+                                <div class="col-xl-5">
+
+                                    <div
+                                        class="
+                                            d-flex
+                                            align-items-center
+                                            gap-2
+                                            flex-wrap
+                                            mb-2
+                                        "
+                                    >
+
+                                        <span class="fw-bold fs-5">
+                                            {{ job.order.reference_number }}
+                                        </span>
+
+
+                                        <!-- PRIORITY -->
+
+                                        {% if job.priority == "urgent" %}
+
+                                            <span class="badge bg-danger">
+                                                Urgent
+                                            </span>
+
+                                        {% elif job.priority == "high" %}
+
+                                            <span
+                                                class="
+                                                    badge
+                                                    bg-warning
+                                                    text-dark
+                                                "
+                                            >
+                                                High
+                                            </span>
+
+                                        {% elif job.priority == "low" %}
+
+                                            <span class="badge bg-secondary">
+                                                Low
+                                            </span>
+
+                                        {% else %}
+
+                                            <span
+                                                class="
+                                                    badge
+                                                    bg-light
+                                                    text-dark
+                                                    border
+                                                "
+                                            >
+                                                Normal
+                                            </span>
+
+                                        {% endif %}
+
+
+                                        <!-- CLOSED STATUS -->
+
+                                        {% if job.stage == "completed" %}
+
+                                            <span class="badge bg-success">
+                                                Completed
+                                            </span>
+
+                                        {% elif job.stage == "cancelled" %}
+
+                                            <span class="badge bg-danger">
+                                                Cancelled
+                                            </span>
+
+                                        {% endif %}
+
+
+                                        <!-- WAITING -->
+
+                                        {% if job.customer_waiting %}
+
+                                            <span
+                                                class="
+                                                    badge
+                                                    bg-info
+                                                    text-dark
+                                                "
+                                            >
+                                                Waiting for Customer
+                                            </span>
+
+                                        {% endif %}
+
+                                    </div>
+
+
+                                    <h2 class="h5 fw-bold mb-3">
+                                        {{ job.job_title }}
+                                    </h2>
+
+
+                                    <div class="text-muted small">
+
+                                        <div class="mb-1">
+
+                                            <strong>
+                                                Customer:
+                                            </strong>
+
+                                            {{ job.order.customer_name }}
+
+                                        </div>
+
+
+                                        {% if job.bespoke_reference %}
+
+                                            <div class="mb-1">
+
+                                                <strong>
+                                                    Bespoke Ref:
+                                                </strong>
+
+                                                {{ job.bespoke_reference }}
+
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        {% if job.order.customer_email %}
+
+                                            <div class="mb-1">
+
+                                                <strong>
+                                                    Email:
+                                                </strong>
+
+                                                <a
+                                                    href="mailto:{{ job.order.customer_email }}"
+                                                    class="text-decoration-none"
+                                                >
+                                                    {{ job.order.customer_email }}
+                                                </a>
+
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        {% if job.order.phone_number %}
+
+                                            <div>
+
+                                                <strong>
+                                                    Phone:
+                                                </strong>
+
+                                                <a
+                                                    href="tel:{{ job.order.phone_number }}"
+                                                    class="text-decoration-none"
+                                                >
+                                                    {{ job.order.phone_number }}
+                                                </a>
+
+                                            </div>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- =================================
+                                     WORKFLOW
+                                ================================== -->
+
+                                <div class="col-md-6 col-xl-3">
+
+                                    <div class="small-label mb-1">
+                                        Current Stage
+                                    </div>
+
+                                    <div class="fw-semibold mb-3">
+                                        {{ job.get_stage_display }}
+                                    </div>
+
+
+                                    <div class="small-label mb-1">
+                                        Resume From
+                                    </div>
+
+                                    <div>
+
+                                        Step {{ job.current_step }}:
+                                        {{ job.resume_label }}
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- =================================
+                                     ASSIGNMENT
+                                ================================== -->
+
+                                <div class="col-md-6 col-xl-2">
+
+                                    <div class="small-label mb-1">
+                                        Assigned To
+                                    </div>
+
+                                    <div class="mb-3">
+
+                                        {% if job.assigned_to %}
+
+                                            <strong>
+
+                                                {% if job.assigned_to.get_full_name %}
+
+                                                    {{ job.assigned_to.get_full_name }}
+
+                                                {% else %}
+
+                                                    {{ job.assigned_to.username }}
+
+                                                {% endif %}
+
+                                            </strong>
+
+                                        {% else %}
+
+                                            <span
+                                                class="
+                                                    text-warning
+                                                    fw-semibold
+                                                "
+                                            >
+                                                Unassigned
+                                            </span>
+
+                                        {% endif %}
+
+                                    </div>
+
+
+                                    <div class="small-label mb-1">
+                                        Last Worked
+                                    </div>
+
+                                    <div class="small">
+
+                                        {% if job.last_worked_at %}
+
+                                            {{ job.last_worked_at|date:"d M Y H:i" }}
+
+                                            {% if job.last_worked_by %}
+
+                                                <div class="text-muted">
+
+                                                    by
+
+                                                    {% if job.last_worked_by.get_full_name %}
+
+                                                        {{ job.last_worked_by.get_full_name }}
+
+                                                    {% else %}
+
+                                                        {{ job.last_worked_by.username }}
+
+                                                    {% endif %}
+
+                                                </div>
+
+                                            {% endif %}
+
+                                        {% else %}
+
+                                            <span class="text-muted">
+                                                Not started
+                                            </span>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- =================================
+                                     ACTIONS
+                                ================================== -->
+
+                                <div class="col-xl-2">
+
+                                    <div class="d-grid gap-2">
+
+                                        {% if is_superuser_view %}
+
+                                            <a
+                                                href="{% url 'order_detail' job.order.reference_number %}"
+                                                class="
+                                                    btn
+                                                    btn-outline-secondary
+                                                    btn-sm
+                                                "
+                                            >
+                                                View Order
+                                            </a>
+
+                                        {% endif %}
+
+
+                                        <!-- WORKFLOW BUTTON -->
+
+                                        {% if job.stage == "completed" %}
+
+                                            <a
+                                                href="{% url 'bespoke_job_wizard' job.order.reference_number job.current_step %}"
+                                                class="
+                                                    btn
+                                                    btn-outline-success
+                                                    btn-sm
+                                                "
+                                            >
+                                                View Completed Job
+                                            </a>
+
+                                        {% elif job.stage == "cancelled" %}
+
+                                            <a
+                                                href="{% url 'bespoke_job_wizard' job.order.reference_number job.current_step %}"
+                                                class="
+                                                    btn
+                                                    btn-outline-danger
+                                                    btn-sm
+                                                "
+                                            >
+                                                View Cancelled Job
+                                            </a>
+
+                                        {% elif job.last_worked_at %}
+
+                                            <a
+                                                href="{% url 'bespoke_job_wizard' job.order.reference_number job.current_step %}"
+                                                class="
+                                                    btn
+                                                    btn-dark
+                                                    btn-sm
+                                                "
+                                            >
+                                                Resume Job
+                                            </a>
+
+                                        {% else %}
+
+                                            <a
+                                                href="{% url 'bespoke_job_wizard' job.order.reference_number job.current_step %}"
+                                                class="
+                                                    btn
+                                                    btn-dark
+                                                    btn-sm
+                                                "
+                                            >
+                                                Start Job
+                                            </a>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- =================================================
+                                 SUPERUSER ASSIGNMENT
+                            ================================================== -->
+
+                            {% if is_superuser_view %}
+
+                                <hr class="my-4">
+
+
+                                <div class="assignment-box p-3">
+
+                                    <div
+                                        class="
+                                            d-flex
+                                            flex-column
+                                            flex-lg-row
+                                            align-items-lg-end
+                                            justify-content-between
+                                            gap-3
+                                        "
+                                    >
+
+                                        <div class="flex-grow-1">
+
+                                            <div class="small-label mb-1">
+                                                Job Assignment
+                                            </div>
+
+                                            <div class="small text-muted">
+
+                                                Assign or reassign this bespoke
+                                                job to an active staff member.
+
+                                            </div>
+
+                                        </div>
+
+
+                                        <form
+                                            method="POST"
+                                            class="
+                                                d-flex
+                                                flex-column
+                                                flex-sm-row
+                                                gap-2
+                                                align-items-sm-end
+                                            "
+                                        >
+
+                                            {% csrf_token %}
+
+                                            <input
+                                                type="hidden"
+                                                name="job_id"
+                                                value="{{ job.pk }}"
+                                            >
+
+
+                                            <div>
+
+                                                <label
+                                                    for="{{ job.assignment_form.assigned_to.id_for_label }}"
+                                                    class="
+                                                        form-label
+                                                        small
+                                                        fw-semibold
+                                                        mb-1
+                                                    "
+                                                >
+                                                    Assign to
+                                                </label>
+
+                                                {{ job.assignment_form.assigned_to }}
+
+                                            </div>
+
+
+                                            <button
+                                                type="submit"
+                                                name="assign_job"
+                                                value="1"
+                                                class="
+                                                    btn
+                                                    btn-primary
+                                                    text-nowrap
+                                                "
+                                            >
+                                                Save Assignment
+                                            </button>
+
+                                        </form>
+
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- =================================================
+                                 SUMMARY / NEXT ACTION
+                            ================================================== -->
+
+                            {% if job.staff_summary or job.next_action %}
+
+                                <hr class="my-4">
+
+
+                                <div class="row g-3">
+
+                                    {% if job.staff_summary %}
+
+                                        <div class="col-lg-6">
+
+                                            <div class="job-summary-box h-100">
+
+                                                <div class="small-label mb-2">
+                                                    Staff Summary
+                                                </div>
+
+                                                <div class="small">
+                                                    {{ job.staff_summary|linebreaksbr }}
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    {% if job.next_action %}
+
+                                        <div class="col-lg-6">
+
+                                            <div class="job-summary-box h-100">
+
+                                                <div class="small-label mb-2">
+                                                    Next Action
+                                                </div>
+
+                                                <div class="small">
+                                                    {{ job.next_action|linebreaksbr }}
+                                                </div>
+
+
+                                                {% if job.next_action_due %}
+
+                                                    <div
+                                                        class="
+                                                            small
+                                                            text-muted
+                                                            mt-2
+                                                        "
+                                                    >
+
+                                                        Due:
+                                                        {{ job.next_action_due|date:"d M Y H:i" }}
+
+                                                    </div>
+
+                                                {% endif %}
+
+                                            </div>
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- =================================================
+             RESULT COUNT
+        ================================================== -->
+
+        <div
+            class="
+                d-flex
+                flex-column
+                flex-sm-row
+                justify-content-between
+                gap-2
+                text-muted
+                small
+                mt-3
+            "
+        >
+
+            <span>
+
+                {{ jobs|length }}
+                job{{ jobs|length|pluralize }}
+                shown
+
+            </span>
+
+
+            {% if not show_closed %}
+
+                <span>
+                    Completed and cancelled jobs are hidden.
+                </span>
+
+            {% endif %}
+
+        </div>
+
+    {% else %}
+
+        <!-- =================================================
+             EMPTY STATE
+        ================================================== -->
+
+        <div
+            class="
+                card
+                border-0
+                shadow-sm
+                rounded-4
+            "
+        >
+
+            <div class="card-body text-center py-5">
+
+                <div class="display-5 mb-3">
+                    🐾
+                </div>
+
+                {% if is_superuser_view %}
+
+                    <h2 class="h4 fw-bold">
+                        No bespoke jobs found
+                    </h2>
+
+                    <p class="text-muted mb-3">
+                        There are no jobs matching the
+                        current filters.
+                    </p>
+
+                {% else %}
+
+                    <h2 class="h4 fw-bold">
+                        No jobs assigned to you
+                    </h2>
+
+                    <p class="text-muted mb-3">
+                        You currently have no bespoke jobs
+                        matching these filters.
+                    </p>
+
+                {% endif %}
+
+
+                <a
+                    href="{% url 'bespoke_jobs_dashboard' %}"
+                    class="btn btn-outline-dark"
+                >
+                    Clear Filters
+                </a>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+
+<!-- =========================================================
+     FILTER JAVASCRIPT
+========================================================== -->
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+
+        const filterForm =
+            document.getElementById(
+                'bespokeFilterForm'
+            );
+
+        const showClosedSwitch =
+            document.getElementById(
+                'showClosedSwitch'
+            );
+
+
+        if (
+            showClosedSwitch &&
+            filterForm
+        ) {
+
+            showClosedSwitch.addEventListener(
+                'change',
+                function () {
+
+                    if (
+                        typeof filterForm.requestSubmit ===
+                        'function'
+                    ) {
+
+                        filterForm.requestSubmit();
+
+                    } else {
+
+                        filterForm.submit();
+
+                    }
+
+                }
+            );
+
+        }
+
+    }
+);
+</script>
+
+{% endblock %}

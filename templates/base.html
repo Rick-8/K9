@@ -1,16 +1,16 @@
 {% load static %}
+
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="description"
+    <meta name="description"
         content="{% block meta_description %}K9 handmade, personalised and bespoke gifts.{% endblock %}">
 
     <title>
@@ -21,40 +21,233 @@
     <!-- =========================================================
          BOOTSTRAP 5
     ========================================================== -->
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-        crossorigin="anonymous">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 
 
     <!-- =========================================================
          BOOTSTRAP ICONS
     ========================================================== -->
-    <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
 
     <!-- =========================================================
          GLOBAL K9 CSS
     ========================================================== -->
-    <link
-        rel="stylesheet"
-        href="{% static 'css/style.css' %}">
+
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
 
     <!-- =========================================================
-         GLOBAL PROMOTION BANNER CSS
+         PROMOTION BANNER CSS
     ========================================================== -->
-    <link
-        rel="stylesheet"
-        href="{% static 'css/promo-banner.css' %}">
+
+    <link rel="stylesheet" href="{% static 'css/promo-banner.css' %}">
+
+
+    <!-- =========================================================
+         NAVIGATION CSS
+    ========================================================== -->
+
+    <style>
+        /* =====================================================
+           K9 MAIN NAVIGATION
+        ====================================================== */
+
+        .k9-navbar {
+            position: relative;
+            z-index: 1030;
+        }
+
+
+        .k9-navbar .navbar-logo {
+            height: 92px;
+            width: auto;
+            object-fit: contain;
+        }
+
+
+        .k9-navbar .nav-link {
+            border-radius: 0.5rem;
+            padding-left: 0.8rem;
+            padding-right: 0.8rem;
+        }
+
+
+        .k9-navbar .nav-link:hover {
+            background: rgba(255,
+                    255,
+                    255,
+                    0.08);
+        }
+
+
+        .k9-navbar .nav-link.active {
+            background: rgba(255,
+                    255,
+                    255,
+                    0.10);
+        }
+
+
+        /* =====================================================
+           MANAGEMENT DROPDOWN
+        ====================================================== */
+
+        .k9-management-link {
+            color: #ffc107 !important;
+            font-weight: 600;
+        }
+
+
+        .k9-management-menu {
+            min-width: 240px;
+            border: 0;
+            border-radius: 0.8rem;
+            overflow: hidden;
+        }
+
+
+        .k9-management-menu .dropdown-header {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+        }
+
+
+        .k9-management-menu .dropdown-item {
+            padding-top: 0.7rem;
+            padding-bottom: 0.7rem;
+        }
+
+
+        .k9-management-menu .dropdown-item i {
+            width: 1.4rem;
+        }
+
+
+        /* =====================================================
+           MOBILE / TABLET SIDE MENU
+        ====================================================== */
+
+        .k9-mobile-menu {
+            width: min(360px,
+                    88vw) !important;
+        }
+
+
+        .k9-mobile-menu .offcanvas-header {
+            border-bottom: 1px solid rgba(255,
+                    255,
+                    255,
+                    0.12);
+        }
+
+
+        .k9-mobile-logo {
+            height: 62px;
+            width: auto;
+        }
+
+
+        .k9-mobile-section-title {
+            font-size: 0.68rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: rgba(255,
+                    255,
+                    255,
+                    0.5);
+            margin-bottom: 0.5rem;
+        }
+
+
+        .k9-mobile-link {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+
+            padding: 0.8rem 0.9rem;
+
+            margin-bottom: 0.2rem;
+
+            border-radius: 0.65rem;
+
+            color: rgba(255,
+                    255,
+                    255,
+                    0.88);
+
+            text-decoration: none;
+
+            transition:
+                background 0.15s ease,
+                color 0.15s ease;
+        }
+
+
+        .k9-mobile-link:hover,
+        .k9-mobile-link.active {
+            background: rgba(255,
+                    255,
+                    255,
+                    0.10);
+
+            color: white;
+        }
+
+
+        .k9-mobile-link i {
+            font-size: 1.1rem;
+            width: 1.4rem;
+            text-align: center;
+        }
+
+
+        .k9-mobile-link.management {
+            color: #ffc107;
+        }
+
+
+        .k9-mobile-link.management:hover,
+        .k9-mobile-link.management.active {
+            color: #ffd65a;
+        }
+
+
+        .k9-mobile-account {
+            background: rgba(255,
+                    255,
+                    255,
+                    0.06);
+
+            border: 1px solid rgba(255,
+                    255,
+                    255,
+                    0.10);
+
+            border-radius: 0.75rem;
+        }
+
+
+        @media (max-width: 991.98px) {
+
+            .k9-navbar .navbar-logo {
+                height: 72px;
+            }
+
+        }
+    </style>
 
 
     <!-- =========================================================
          PAGE-SPECIFIC CSS
     ========================================================== -->
+
     {% block extra_css %}
     {% endblock %}
 
@@ -66,76 +259,68 @@
 
     <!-- =========================================================
          SALES / PROMOTIONAL BANNER
-
-         Later this will be controlled from Django Admin.
-
-         Modes:
-         static
-         scroll
-         flash
-         both
     ========================================================== -->
+
     {% block promo_banner %}
 
-        <section
-            class="promo-banner"
-            data-banner-mode="{{ sale_banner_mode|default:'scroll' }}"
-            aria-label="Current promotion">
+    <section class="promo-banner" data-banner-mode="{{ sale_banner_mode|default:'scroll' }}"
+        aria-label="Current promotion">
 
-            <div class="promo-banner-inner">
+        <div class="promo-banner-inner">
 
-                <div class="promo-banner-track">
+            <div class="promo-banner-track">
 
-                    <span class="promo-banner-message">
+                <span class="promo-banner-message">
 
-                        <i class="bi bi-stars me-2"></i>
+                    <i class="bi bi-stars me-2"></i>
 
-                        {{ sale_banner_text|default:"Welcome to K9 — handmade gifts, personalised creations and completely bespoke designs." }}
+                    {{ sale_banner_text|default:"Welcome to K9 — handmade gifts, personalised creations and completely
+                    bespoke designs." }}
 
-                        <i class="bi bi-stars ms-2"></i>
+                    <i class="bi bi-stars ms-2"></i>
 
-                    </span>
+                </span>
 
 
-                    <!--
-                        Duplicate message used to create
-                        a seamless scrolling animation.
-                    -->
-                    <span
-                        class="promo-banner-message promo-banner-message-copy"
-                        aria-hidden="true">
+                <!-- Duplicate for continuous scrolling -->
 
-                        <i class="bi bi-stars me-2"></i>
+                <span class="
+                            promo-banner-message
+                            promo-banner-message-copy
+                        " aria-hidden="true">
 
-                        {{ sale_banner_text|default:"Welcome to K9 — handmade gifts, personalised creations and completely bespoke designs." }}
+                    <i class="bi bi-stars me-2"></i>
 
-                        <i class="bi bi-stars ms-2"></i>
+                    {{ sale_banner_text|default:"Welcome to K9 — handmade gifts, personalised creations and completely
+                    bespoke designs." }}
 
-                    </span>
+                    <i class="bi bi-stars ms-2"></i>
 
-                </div>
+                </span>
 
             </div>
 
-        </section>
+        </div>
+
+    </section>
 
     {% endblock %}
-
 
 
     <!-- =========================================================
          HEADER / NAVIGATION
     ========================================================== -->
+
     <header class="site-header">
 
-        <nav
-            class="
-                navbar
-                navbar-expand-lg
-                navbar-dark
-                bg-dark
-                shadow-sm
-            ">
+        <nav class="
+        navbar
+        navbar-expand-lg
+        navbar-dark
+        bg-dark
+        shadow-sm
+        k9-navbar
+    ">
 
             <div class="container">
 
@@ -143,83 +328,52 @@
                 <!-- =================================================
                      LOGO
                 ================================================== -->
-                <div
-                    class="
-                        navbar-brand-container
+
+                <a href="{% url 'home' %}" class="
+                        navbar-brand
                         d-flex
                         align-items-center
+                        py-0
+                    " aria-label="K9 Home">
+
+                    <img src="{% static 'media/logo-I.png' %}" alt="K9 Logo" class="navbar-logo">
+
+                </a>
+
+
+                <!-- =================================================
+                     DESKTOP NAVIGATION
+                     LARGE SCREENS ONLY
+                ================================================== -->
+
+                <div class="
+                        d-none
+                        d-lg-flex
+                        align-items-center
+                        ms-auto
                     ">
 
-                    <a
-                        href="{% url 'home' %}"
-                        class="
-                            d-flex
-                            align-items-center
-                            text-decoration-none
-                        "
-                        aria-label="K9 Home">
-
-                        <img
-                            src="{% static 'media/logo-I.png' %}"
-                            alt="K9 Logo"
-                            class="navbar-logo"
-                            style="height: 100px; width: auto;">
-
-                    </a>
-
-                </div>
-
-
-
-                <!-- =================================================
-                     MOBILE MENU BUTTON
-                ================================================== -->
-                <button
-                    class="navbar-toggler"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#navbarNav"
-                    aria-controls="navbarNav"
-                    aria-expanded="false"
-                    aria-label="Toggle navigation">
-
-                    <span class="navbar-toggler-icon"></span>
-
-                </button>
-
-
-
-                <!-- =================================================
-                     NAVIGATION
-                ================================================== -->
-                <div
-                    class="collapse navbar-collapse"
-                    id="navbarNav">
-
-                    <ul
-                        class="
+                    <ul class="
                             navbar-nav
-                            ms-auto
                             align-items-center
-                            text-center
-                            gap-lg-1
+                            gap-1
                         ">
 
 
-                        <!-- =================================================
+                        <!-- =========================================
                              HOME
-                        ================================================== -->
+                        ========================================== -->
+
                         <li class="nav-item">
 
-                            <a
-                                class="
+                            <a class="
                                     nav-link
+
                                     {% if request.resolver_match.url_name == 'home' %}
                                         active
                                         fw-semibold
                                     {% endif %}
-                                "
-                                href="{% url 'home' %}">
+                                " href="{% url 'home' %}">
 
                                 <i class="bi bi-house-door me-1"></i>
 
@@ -230,21 +384,20 @@
                         </li>
 
 
-
-                        <!-- =================================================
+                        <!-- =========================================
                              SHOP
-                        ================================================== -->
+                        ========================================== -->
+
                         <li class="nav-item">
 
-                            <a
-                                class="
+                            <a class="
                                     nav-link
+
                                     {% if request.resolver_match.namespace == 'shop' %}
                                         active
                                         fw-semibold
                                     {% endif %}
-                                "
-                                href="{% url 'shop:shop_home' %}">
+                                " href="{% url 'shop:shop_home' %}">
 
                                 <i class="bi bi-shop me-1"></i>
 
@@ -255,21 +408,20 @@
                         </li>
 
 
-
-                        <!-- =================================================
+                        <!-- =========================================
                              BESPOKE
-                        ================================================== -->
+                        ========================================== -->
+
                         <li class="nav-item">
 
-                            <a
-                                class="
+                            <a class="
                                     nav-link
+
                                     {% if '/bespoke/' in request.path %}
                                         active
                                         fw-semibold
                                     {% endif %}
-                                "
-                                href="/bespoke/">
+                                " href="/bespoke/">
 
                                 <i class="bi bi-stars me-1"></i>
 
@@ -280,189 +432,357 @@
                         </li>
 
 
-
                         <!-- =================================================
-                             STAFF ONLY
+                             MANAGEMENT
+                             STAFF / SUPERUSERS ONLY
                         ================================================== -->
+
                         {% if request.user.is_staff %}
 
-                            <li class="nav-item">
+                        <li class="nav-item dropdown">
 
-                                <a
-                                    class="
+                            <a class="
                                         nav-link
-                                        text-warning
-                                        fw-semibold
-                                    "
-                                    href="{% url 'order_dashboard' %}">
+                                        dropdown-toggle
+                                        k9-management-link
 
-                                    <i class="bi bi-speedometer2 me-1"></i>
+                                        {% if request.resolver_match.url_name == 'order_dashboard' or request.resolver_match.url_name == 'order_detail' or request.resolver_match.url_name == 'bespoke_jobs_dashboard' or request.resolver_match.url_name == 'staff_jobs_dashboard' or request.resolver_match.url_name == 'bespoke_job_wizard' %}
+                                            active
+                                        {% endif %}
+                                    " href="#" id="managementDropdown" role="button" data-bs-toggle="dropdown"
+                                aria-expanded="false">
 
-                                    Order Dashboard
+                                <i class="bi bi-gear-fill me-1"></i>
 
-                                </a>
+                                Management
 
-                            </li>
+                            </a>
+
+
+                            <ul class="
+                                        dropdown-menu
+                                        dropdown-menu-end
+                                        shadow
+                                        k9-management-menu
+                                    " aria-labelledby="managementDropdown">
+
+                                <li>
+
+                                    <h6 class="dropdown-header">
+                                        K9 Management
+                                    </h6>
+
+                                </li>
+
+
+                                <!-- =============================
+                                         SUPERUSER
+                                    ============================== -->
+
+                                {% if request.user.is_superuser %}
+
+                                <li>
+
+                                    <a class="
+                                                    dropdown-item
+
+                                                    {% if request.resolver_match.url_name == 'order_dashboard' or request.resolver_match.url_name == 'order_detail' %}
+                                                        active
+                                                    {% endif %}
+                                                " href="{% url 'order_dashboard' %}">
+
+                                        <i class="bi bi-receipt-cutoff me-2"></i>
+
+                                        Order Dashboard
+
+                                    </a>
+
+                                </li>
+
+
+                                <li>
+
+                                    <a class="
+                                                    dropdown-item
+
+                                                    {% if request.resolver_match.url_name == 'bespoke_jobs_dashboard' or request.resolver_match.url_name == 'bespoke_job_wizard' %}
+                                                        active
+                                                    {% endif %}
+                                                " href="{% url 'bespoke_jobs_dashboard' %}">
+
+                                        <i class="bi bi-kanban me-2"></i>
+
+                                        Bespoke Jobs
+
+                                    </a>
+
+                                </li>
+
+
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+
+
+                                <li>
+
+                                    <span class="
+                                                    dropdown-item-text
+                                                    small
+                                                    text-muted
+                                                ">
+                                        Superuser access
+                                    </span>
+
+                                </li>
+
+
+                                <!-- =============================
+                                         STAFF MEMBER
+                                    ============================== -->
+
+                                {% else %}
+
+                                <li>
+
+                                    <a class="
+                                                    dropdown-item
+
+                                                    {% if request.resolver_match.url_name == 'staff_jobs_dashboard' or request.resolver_match.url_name == 'bespoke_job_wizard' %}
+                                                        active
+                                                    {% endif %}
+                                                " href="{% url 'staff_jobs_dashboard' %}">
+
+                                        <i class="bi bi-person-workspace me-2"></i>
+
+                                        My Assigned Jobs
+
+                                    </a>
+
+                                </li>
+
+
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+
+
+                                <li>
+
+                                    <span class="
+                                                    dropdown-item-text
+                                                    small
+                                                    text-muted
+                                                ">
+                                        Only jobs assigned to you
+                                    </span>
+
+                                </li>
+
+                                {% endif %}
+
+                            </ul>
+
+                        </li>
 
                         {% endif %}
 
 
-
                         <!-- =================================================
-                             LOGGED-IN CUSTOMER
+                             ACCOUNT
                         ================================================== -->
+
                         {% if user.is_authenticated %}
 
-                            <li class="nav-item dropdown">
+                        <li class="nav-item dropdown">
 
-                                <a
-                                    class="
+                            <a class="
                                         nav-link
                                         dropdown-toggle
                                         d-flex
                                         align-items-center
-                                        justify-content-center
                                         gap-1
-                                    "
-                                    href="#"
-                                    id="accountDropdown"
-                                    role="button"
-                                    data-bs-toggle="dropdown"
-                                    aria-expanded="false">
+                                    " href="#" id="accountDropdown" role="button" data-bs-toggle="dropdown"
+                                aria-expanded="false">
 
-                                    <i class="bi bi-person-circle"></i>
+                                <i class="bi bi-person-circle"></i>
 
-                                    {% if user.first_name %}
+                                {% if user.first_name %}
 
-                                        {{ user.first_name }}
+                                {{ user.first_name }}
 
-                                    {% else %}
+                                {% else %}
 
-                                        My Account
+                                My Account
 
-                                    {% endif %}
+                                {% endif %}
 
-                                </a>
+                            </a>
 
 
-                                <ul
-                                    class="
+                            <ul class="
                                         dropdown-menu
                                         dropdown-menu-end
-                                        text-center
-                                        text-lg-start
                                         shadow-sm
-                                    "
-                                    aria-labelledby="accountDropdown">
+                                    " aria-labelledby="accountDropdown">
 
+                                <li>
 
-                                    <li>
-
-                                        <span
-                                            class="
+                                    <span class="
                                                 dropdown-item-text
                                                 small
                                                 text-muted
                                             ">
 
-                                            Signed in as
+                                        Signed in as
 
-                                            <br>
+                                        <br>
 
-                                            <strong>
-                                                {{ user.email }}
-                                            </strong>
+                                        <strong>
+                                            {{ user.email }}
+                                        </strong>
 
-                                        </span>
+                                    </span>
 
-                                    </li>
-
-
-                                    <!--
-                                        Future shop account links:
-
-                                        My Orders
-                                        Track Orders
-                                        Saved Addresses
-                                        Account Details
-                                    -->
+                                </li>
 
 
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
+                                {% if request.user.is_staff %}
+
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
 
 
-                                    <li>
+                                <li>
 
-                                        <a
-                                            class="dropdown-item"
-                                            href="{% url 'account_logout' %}">
+                                    <span class="
+                                                    dropdown-item-text
+                                                    small
+                                                ">
 
-                                            <i class="bi bi-box-arrow-right me-2"></i>
+                                        <i class="
+                                                        bi
+                                                        bi-person-badge
+                                                        me-2
+                                                    "></i>
 
-                                            Log Out
+                                        {% if request.user.is_superuser %}
+                                        Superuser
+                                        {% else %}
+                                        Staff Member
+                                        {% endif %}
 
-                                        </a>
+                                    </span>
 
-                                    </li>
+                                </li>
 
-                                </ul>
-
-                            </li>
+                                {% endif %}
 
 
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
 
-                        <!-- =================================================
-                             GUEST CUSTOMER
-                        ================================================== -->
+
+                                <li>
+
+                                    <a class="dropdown-item" href="{% url 'account_logout' %}">
+
+                                        <i class="
+                                                    bi
+                                                    bi-box-arrow-right
+                                                    me-2
+                                                "></i>
+
+                                        Log Out
+
+                                    </a>
+
+                                </li>
+
+                            </ul>
+
+                        </li>
+
+
                         {% else %}
 
-                            <li class="nav-item">
+                        <!-- =========================================
+                                 GUEST LOGIN
+                            ========================================== -->
 
-                                <a
-                                    class="
+                        <li class="nav-item">
+
+                            <a class="
                                         nav-link
+
                                         {% if request.resolver_match.url_name == 'account_login' %}
                                             active
                                         {% endif %}
-                                    "
-                                    href="{% url 'account_login' %}">
+                                    " href="{% url 'account_login' %}">
 
-                                    <i class="bi bi-box-arrow-in-right me-1"></i>
+                                <i class="
+                                            bi
+                                            bi-box-arrow-in-right
+                                            me-1
+                                        "></i>
 
-                                    Log In
+                                Log In
 
-                                </a>
+                            </a>
 
-                            </li>
+                        </li>
 
 
-                            <li class="nav-item">
+                        <!-- =========================================
+                                 REGISTER
+                            ========================================== -->
 
-                                <a
-                                    class="
+                        <li class="nav-item">
+
+                            <a class="
                                         nav-link
+
                                         {% if request.resolver_match.url_name == 'account_signup' %}
                                             active
                                         {% endif %}
-                                    "
-                                    href="{% url 'account_signup' %}">
+                                    " href="{% url 'account_signup' %}">
 
-                                    <i class="bi bi-person-plus me-1"></i>
+                                <i class="
+                                            bi
+                                            bi-person-plus
+                                            me-1
+                                        "></i>
 
-                                    Register
+                                Register
 
-                                </a>
+                            </a>
 
-                            </li>
+                        </li>
 
                         {% endif %}
-
 
                     </ul>
 
                 </div>
+
+
+                <!-- =================================================
+                     PHONE / TABLET MENU BUTTON
+                ================================================== -->
+
+                <button class="
+                        navbar-toggler
+                        d-lg-none
+                        border-0
+                        shadow-none
+                    " type="button" data-bs-toggle="offcanvas" data-bs-target="#k9MobileMenu"
+                    aria-controls="k9MobileMenu" aria-label="Open menu">
+
+                    <span class="navbar-toggler-icon"></span>
+
+                </button>
 
             </div>
 
@@ -471,28 +791,454 @@
     </header>
 
 
+    <!-- =========================================================
+         PHONE / TABLET SIDE MENU
+    ========================================================== -->
+
+    <div class="
+            offcanvas
+            offcanvas-end
+            text-bg-dark
+            k9-mobile-menu
+        " tabindex="-1" id="k9MobileMenu" aria-labelledby="k9MobileMenuLabel">
+
+        <!-- =====================================================
+             SIDE MENU HEADER
+        ====================================================== -->
+
+        <div class="offcanvas-header">
+
+            <a href="{% url 'home' %}" class="
+                    d-flex
+                    align-items-center
+                    gap-2
+                    text-decoration-none
+                    text-white
+                ">
+
+                <img src="{% static 'media/logo-I.png' %}" alt="K9" class="k9-mobile-logo">
+
+
+                <div>
+
+                    <div class="
+                            fw-bold
+                            fs-5
+                        " id="k9MobileMenuLabel">
+                        K9
+                    </div>
+
+                    <div class="small text-white-50">
+                        Menu
+                    </div>
+
+                </div>
+
+            </a>
+
+
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
+                aria-label="Close menu"></button>
+
+        </div>
+
+
+        <!-- =====================================================
+             SIDE MENU BODY
+        ====================================================== -->
+
+        <div class="
+                offcanvas-body
+                d-flex
+                flex-column
+                p-4
+            ">
+
+            <!-- =================================================
+                 MAIN WEBSITE
+            ================================================== -->
+
+            <div class="k9-mobile-section-title">
+                K9
+            </div>
+
+
+            <nav class="mb-4">
+
+                <!-- HOME -->
+
+                <a href="{% url 'home' %}" class="
+                        k9-mobile-link
+
+                        {% if request.resolver_match.url_name == 'home' %}
+                            active
+                        {% endif %}
+                    ">
+
+                    <i class="bi bi-house-door"></i>
+
+                    <span>
+                        Home
+                    </span>
+
+                </a>
+
+
+                <!-- SHOP -->
+
+                <a href="{% url 'shop:shop_home' %}" class="
+                        k9-mobile-link
+
+                        {% if request.resolver_match.namespace == 'shop' %}
+                            active
+                        {% endif %}
+                    ">
+
+                    <i class="bi bi-shop"></i>
+
+                    <span>
+                        Shop
+                    </span>
+
+                </a>
+
+
+                <!-- BESPOKE -->
+
+                <a href="/bespoke/" class="
+                        k9-mobile-link
+
+                        {% if '/bespoke/' in request.path %}
+                            active
+                        {% endif %}
+                    ">
+
+                    <i class="bi bi-stars"></i>
+
+                    <span>
+                        Bespoke
+                    </span>
+
+                </a>
+
+            </nav>
+
+
+            <!-- =================================================
+                 MANAGEMENT
+            ================================================== -->
+
+            {% if request.user.is_staff %}
+
+            <div class="k9-mobile-section-title">
+                Management
+            </div>
+
+
+            <nav class="mb-4">
+
+
+                <!-- =========================================
+                         SUPERUSER MANAGEMENT
+                    ========================================== -->
+
+                {% if request.user.is_superuser %}
+
+                <a href="{% url 'order_dashboard' %}" class="
+                                k9-mobile-link
+                                management
+
+                                {% if request.resolver_match.url_name == 'order_dashboard' or request.resolver_match.url_name == 'order_detail' %}
+                                    active
+                                {% endif %}
+                            ">
+
+                    <i class="bi bi-receipt-cutoff"></i>
+
+                    <div>
+
+                        <div class="fw-semibold">
+                            Order Dashboard
+                        </div>
+
+                        <div class="
+                                        small
+                                        text-white-50
+                                    ">
+                            Manage all customer orders
+                        </div>
+
+                    </div>
+
+                </a>
+
+
+                <a href="{% url 'bespoke_jobs_dashboard' %}" class="
+                                k9-mobile-link
+                                management
+
+                                {% if request.resolver_match.url_name == 'bespoke_jobs_dashboard' or request.resolver_match.url_name == 'bespoke_job_wizard' %}
+                                    active
+                                {% endif %}
+                            ">
+
+                    <i class="bi bi-kanban"></i>
+
+                    <div>
+
+                        <div class="fw-semibold">
+                            Bespoke Jobs
+                        </div>
+
+                        <div class="
+                                        small
+                                        text-white-50
+                                    ">
+                            Assign and manage bespoke work
+                        </div>
+
+                    </div>
+
+                </a>
+
+
+                <!-- =========================================
+                         STAFF MANAGEMENT
+                    ========================================== -->
+
+                {% else %}
+
+                <a href="{% url 'staff_jobs_dashboard' %}" class="
+                                k9-mobile-link
+                                management
+
+                                {% if request.resolver_match.url_name == 'staff_jobs_dashboard' or request.resolver_match.url_name == 'bespoke_job_wizard' %}
+                                    active
+                                {% endif %}
+                            ">
+
+                    <i class="bi bi-person-workspace"></i>
+
+                    <div>
+
+                        <div class="fw-semibold">
+                            My Assigned Jobs
+                        </div>
+
+                        <div class="
+                                        small
+                                        text-white-50
+                                    ">
+                            View and continue your jobs
+                        </div>
+
+                    </div>
+
+                </a>
+
+                {% endif %}
+
+            </nav>
+
+            {% endif %}
+
+
+            <!-- =================================================
+                 ACCOUNT
+            ================================================== -->
+
+            <div class="k9-mobile-section-title">
+                Account
+            </div>
+
+
+            {% if user.is_authenticated %}
+
+            <div class="
+                        k9-mobile-account
+                        p-3
+                        mb-3
+                    ">
+
+                <div class="
+                            d-flex
+                            align-items-center
+                            gap-3
+                        ">
+
+                    <i class="
+                                bi
+                                bi-person-circle
+                                fs-2
+                            "></i>
+
+
+                    <div class="overflow-hidden">
+
+                        <div class="fw-semibold">
+
+                            {% if user.get_full_name %}
+
+                            {{ user.get_full_name }}
+
+                            {% elif user.first_name %}
+
+                            {{ user.first_name }}
+
+                            {% else %}
+
+                            {{ user.username }}
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <div class="
+                                    small
+                                    text-white-50
+                                    text-truncate
+                                ">
+                            {{ user.email }}
+                        </div>
+
+
+                        {% if request.user.is_staff %}
+
+                        <div class="
+                                        small
+                                        text-warning
+                                        mt-1
+                                    ">
+
+                            {% if request.user.is_superuser %}
+
+                            <i class="
+                                                bi
+                                                bi-shield-lock-fill
+                                                me-1
+                                            "></i>
+
+                            Superuser
+
+                            {% else %}
+
+                            <i class="
+                                                bi
+                                                bi-person-badge
+                                                me-1
+                                            "></i>
+
+                            Staff Member
+
+                            {% endif %}
+
+                        </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <a href="{% url 'account_logout' %}" class="k9-mobile-link">
+
+                <i class="bi bi-box-arrow-right"></i>
+
+                <span>
+                    Log Out
+                </span>
+
+            </a>
+
+
+            {% else %}
+
+            <a href="{% url 'account_login' %}" class="
+                        k9-mobile-link
+
+                        {% if request.resolver_match.url_name == 'account_login' %}
+                            active
+                        {% endif %}
+                    ">
+
+                <i class="bi bi-box-arrow-in-right"></i>
+
+                <span>
+                    Log In
+                </span>
+
+            </a>
+
+
+            <a href="{% url 'account_signup' %}" class="
+                        k9-mobile-link
+
+                        {% if request.resolver_match.url_name == 'account_signup' %}
+                            active
+                        {% endif %}
+                    ">
+
+                <i class="bi bi-person-plus"></i>
+
+                <span>
+                    Register
+                </span>
+
+            </a>
+
+            {% endif %}
+
+
+            <!-- =================================================
+                 SIDE MENU FOOTER
+            ================================================== -->
+
+            <div class="
+                    mt-auto
+                    pt-4
+                    text-center
+                    small
+                    text-white-50
+                ">
+
+                K9
+
+                <span class="mx-1">
+                    •
+                </span>
+
+                Handmade & Bespoke Gifts
+
+            </div>
+
+        </div>
+
+    </div>
+
 
     <!-- =========================================================
          MAIN CONTENT
     ========================================================== -->
+
     <main class="flex-grow-1">
 
 
-        <!--
-            Full-width content.
+        <!-- =====================================================
+             FULL-WIDTH PAGE CONTENT
+        ====================================================== -->
 
-            Used for:
-            - Homepage hero
-            - Shop banners
-            - Large promotional sections
-        -->
         {% block full_width_content %}
         {% endblock %}
 
 
-        <!--
-            Standard contained page content.
-        -->
+        <!-- =====================================================
+             STANDARD PAGE CONTENT
+        ====================================================== -->
+
         <div class="container my-5">
 
             {% block content %}
@@ -503,12 +1249,11 @@
     </main>
 
 
-
     <!-- =========================================================
          FOOTER
     ========================================================== -->
-    <footer
-        class="
+
+    <footer class="
             bg-white
             border-top
             mt-auto
@@ -517,8 +1262,7 @@
 
         <div class="container">
 
-            <div
-                class="
+            <div class="
                     d-flex
                     flex-column
                     flex-md-row
@@ -526,7 +1270,6 @@
                     align-items-center
                     gap-3
                 ">
-
 
                 <div class="text-center text-md-start">
 
@@ -560,28 +1303,26 @@
     </footer>
 
 
-
     <!-- =========================================================
          BOOTSTRAP JAVASCRIPT
     ========================================================== -->
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-        crossorigin="anonymous">
-    </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
 
 
     <!-- =========================================================
-         GLOBAL PROMOTION BANNER JS
+         PROMOTION BANNER JS
     ========================================================== -->
-    <script src="{% static 'js/promo-banner.js' %}"></script>
 
+    <script src="{% static 'js/promo-banner.js' %}"></script>
 
 
     <!-- =========================================================
          PAGE-SPECIFIC JAVASCRIPT
     ========================================================== -->
+
     {% block extra_js %}
     {% endblock %}
 

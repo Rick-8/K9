@@ -1,0 +1,2512 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{ order.reference_number }} |
+    {{ step_data.title }} |
+    K9
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+    .job-wizard {
+        --wizard-dark: #212529;
+        --wizard-border: #e5e7eb;
+        --wizard-soft: #f8f9fa;
+        --wizard-muted: #6c757d;
+    }
+
+    .job-wizard .wizard-header {
+        background:
+            linear-gradient(
+                135deg,
+                #212529,
+                #343a40
+            );
+        color: white;
+        border-radius: 1rem;
+    }
+
+    .job-wizard .wizard-card {
+        border: 1px solid var(--wizard-border);
+        border-radius: 1rem;
+        box-shadow:
+            0 0.3rem 1.2rem
+            rgba(0, 0, 0, 0.045);
+        overflow: hidden;
+    }
+
+    .job-wizard .step-item {
+        display: block;
+        padding: 0.8rem 1rem;
+        border-radius: 0.75rem;
+        text-decoration: none;
+        color: #495057;
+        margin-bottom: 0.35rem;
+    }
+
+    .job-wizard .step-item.active {
+        background: #212529;
+        color: white;
+    }
+
+    .job-wizard .step-item.complete {
+        background: #f1f3f5;
+    }
+
+    .job-wizard .step-item.locked {
+        opacity: 0.45;
+        cursor: default;
+    }
+
+    .job-wizard .step-number {
+        width: 1.8rem;
+        height: 1.8rem;
+        border-radius: 50%;
+        background: #dee2e6;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        margin-right: 0.6rem;
+    }
+
+    .job-wizard .active .step-number {
+        background: white;
+        color: #212529;
+    }
+
+    .job-wizard .summary-panel {
+        background: #f8f9fa;
+        border-radius: 0.8rem;
+        padding: 1rem;
+    }
+
+    .job-wizard .sticky-column {
+        position: sticky;
+        top: 1rem;
+    }
+
+    .job-wizard .section-label {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        color: var(--wizard-muted);
+    }
+
+    .job-wizard .contact-detail {
+        background: var(--wizard-soft);
+        border: 1px solid var(--wizard-border);
+        border-radius: 0.8rem;
+        padding: 1rem;
+        height: 100%;
+    }
+
+    .job-wizard .contact-icon {
+        width: 2.6rem;
+        height: 2.6rem;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #212529;
+        color: white;
+        flex-shrink: 0;
+    }
+
+    .job-wizard .contact-action-card {
+        border: 1px solid var(--wizard-border);
+        border-radius: 0.9rem;
+        background: white;
+        scroll-margin-top: 1rem;
+    }
+
+    .job-wizard .communication-entry {
+        position: relative;
+        border: 1px solid var(--wizard-border);
+        border-radius: 0.9rem;
+        background: white;
+        padding: 1rem;
+    }
+
+    .job-wizard .communication-entry.outgoing {
+        border-left: 4px solid #212529;
+    }
+
+    .job-wizard .communication-entry.incoming {
+        border-left: 4px solid #0d6efd;
+    }
+
+    .job-wizard .communication-content {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        line-height: 1.55;
+    }
+
+    .job-wizard .attachment-box {
+        background: #f8f9fa;
+        border: 1px dashed #adb5bd;
+        border-radius: 0.75rem;
+        padding: 1rem;
+    }
+
+    .job-wizard .attachment-file {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.6rem;
+        padding: 0.7rem 0.8rem;
+    }
+
+    .job-wizard .feed-entry {
+        border-left: 3px solid #dee2e6;
+        padding-left: 1rem;
+        padding-bottom: 1.2rem;
+    }
+
+    .job-wizard .feed-entry.communication {
+        border-left-color: #0d6efd;
+    }
+
+    .job-wizard .feed-entry.system {
+        border-left-color: #6c757d;
+    }
+
+    .job-wizard .feed-content {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    .job-wizard .design-status {
+        border-radius: 0.9rem;
+        padding: 1rem;
+        border: 1px solid var(--wizard-border);
+    }
+
+    .job-wizard .design-status.ready {
+        background: #ecfdf3;
+        border-color: #badbcc;
+    }
+
+    .job-wizard .design-status.not-ready {
+        background: #fff8e5;
+        border-color: #ffe69c;
+    }
+
+    .job-wizard .private-note-box {
+        background: #fff8e5;
+        border: 1px solid #ffe69c;
+        border-radius: 0.7rem;
+        padding: 0.8rem 1rem;
+    }
+
+    @media (max-width: 991.98px) {
+        .job-wizard .sticky-column {
+            position: static;
+        }
+    }
+</style>
+
+
+<div class="container py-4 job-wizard">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <div class="wizard-header p-4 p-lg-5 mb-4 shadow-sm">
+
+        <div
+            class="
+                d-flex
+                flex-column
+                flex-lg-row
+                justify-content-between
+                gap-3
+            "
+        >
+
+            <div>
+
+                <div
+                    class="
+                        small
+                        text-uppercase
+                        fw-semibold
+                        text-white-50
+                        mb-2
+                    "
+                >
+                    K9 Bespoke Workflow
+                </div>
+
+                <h1 class="h2 fw-bold mb-2">
+                    {{ order.reference_number }}
+                </h1>
+
+                <div class="text-white-50">
+                    {{ workflow.job_title }}
+                </div>
+
+                <div class="small text-white-50 mt-2">
+
+                    Customer:
+                    {{ order.customer_name }}
+
+                    <span class="mx-2">•</span>
+
+                    {{ workflow.get_stage_display }}
+
+                </div>
+
+            </div>
+
+
+            <div>
+
+                {% if request.user.is_superuser %}
+
+                    <a
+                        href="{% url 'bespoke_jobs_dashboard' %}"
+                        class="btn btn-outline-light"
+                    >
+                        Exit to Jobs
+                    </a>
+
+                {% else %}
+
+                    <a
+                        href="{% url 'staff_jobs_dashboard' %}"
+                        class="btn btn-outline-light"
+                    >
+                        Exit to My Jobs
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <div class="mt-4">
+
+            <div
+                class="
+                    d-flex
+                    justify-content-between
+                    small
+                    mb-2
+                "
+            >
+
+                <span>
+                    Workflow Progress
+                </span>
+
+                <span>
+                    Step {{ workflow.current_step }} of 8
+                </span>
+
+            </div>
+
+            <div
+                class="progress"
+                style="height: 8px;"
+            >
+
+                <div
+                    class="progress-bar bg-success"
+                    role="progressbar"
+                    style="width: {{ progress_percent }}%;"
+                    aria-valuenow="{{ progress_percent }}"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                ></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MESSAGES
+    ====================================================== -->
+
+    {% if messages %}
+
+        {% for message in messages %}
+
+            <div
+                class="
+                    alert
+                    {% if message.tags == 'error' %}
+                        alert-danger
+                    {% elif message.tags == 'warning' %}
+                        alert-warning
+                    {% elif message.tags == 'info' %}
+                        alert-info
+                    {% else %}
+                        alert-success
+                    {% endif %}
+                    alert-dismissible
+                    fade
+                    show
+                "
+            >
+
+                {{ message }}
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+
+    <div class="row g-4">
+
+        <!-- =================================================
+             LEFT NAVIGATION
+        ================================================== -->
+
+        <div class="col-lg-3">
+
+            <div class="wizard-card bg-white sticky-column">
+
+                <div class="card-body p-3">
+
+                    <div
+                        class="
+                            small
+                            text-uppercase
+                            text-muted
+                            fw-bold
+                            px-2
+                            mb-3
+                        "
+                    >
+                        Job Workflow
+                    </div>
+
+
+                    {% for wizard_step in wizard_steps %}
+
+                        {% if wizard_step.unlocked %}
+
+                            <a
+                                href="{% url 'bespoke_job_wizard' order.reference_number wizard_step.number %}"
+                                class="
+                                    step-item
+                                    {% if wizard_step.active %}
+                                        active
+                                    {% elif wizard_step.complete %}
+                                        complete
+                                    {% endif %}
+                                "
+                            >
+
+                                <span class="step-number">
+
+                                    {% if wizard_step.complete %}
+                                        ✓
+                                    {% else %}
+                                        {{ wizard_step.number }}
+                                    {% endif %}
+
+                                </span>
+
+                                {{ wizard_step.title }}
+
+                            </a>
+
+                        {% else %}
+
+                            <div class="step-item locked">
+
+                                <span class="step-number">
+                                    {{ wizard_step.number }}
+                                </span>
+
+                                {{ wizard_step.title }}
+
+                            </div>
+
+                        {% endif %}
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             MAIN
+        ================================================== -->
+
+        <div class="col-lg-6">
+
+
+            <!-- =================================================
+                 STEP 2
+            ================================================== -->
+
+            {% if step == 2 %}
+
+                <div class="wizard-card bg-white mb-4">
+
+                    <div class="card-body p-4 p-lg-5">
+
+                        <div class="section-label mb-2">
+                            Step 2 of 8
+                        </div>
+
+                        <h2 class="h3 fw-bold mb-2">
+                            Customer Contact
+                        </h2>
+
+                        <p class="text-muted mb-0">
+                            Contact the customer and keep every
+                            important conversation recorded against
+                            this bespoke job.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- CUSTOMER DETAILS -->
+
+                <div class="wizard-card bg-white mb-4">
+
+                    <div class="card-body p-4">
+
+                        <div class="section-label mb-1">
+                            Customer
+                        </div>
+
+                        <h3 class="h5 fw-bold mb-4">
+                            Contact Details
+                        </h3>
+
+
+                        <div class="row g-3">
+
+                            <div class="col-12">
+
+                                <div class="contact-detail">
+
+                                    <div
+                                        class="
+                                            d-flex
+                                            align-items-center
+                                            gap-3
+                                        "
+                                    >
+
+                                        <div class="contact-icon">
+                                            <i class="bi bi-envelope"></i>
+                                        </div>
+
+                                        <div class="flex-grow-1">
+
+                                            <div class="small text-muted">
+                                                Email Address
+                                            </div>
+
+                                            <a
+                                                href="mailto:{{ order.customer_email }}"
+                                                class="
+                                                    fw-semibold
+                                                    text-decoration-none
+                                                "
+                                            >
+                                                {{ order.customer_email }}
+                                            </a>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="col-md-6">
+
+                                <div class="contact-detail">
+
+                                    <div
+                                        class="
+                                            d-flex
+                                            align-items-center
+                                            gap-3
+                                        "
+                                    >
+
+                                        <div class="contact-icon">
+                                            <i class="bi bi-telephone"></i>
+                                        </div>
+
+                                        <div>
+
+                                            <div class="small text-muted">
+                                                Telephone
+                                            </div>
+
+                                            {% if order.phone_number %}
+
+                                                <a
+                                                    href="tel:{{ order.phone_number }}"
+                                                    class="
+                                                        fw-semibold
+                                                        text-decoration-none
+                                                    "
+                                                >
+                                                    {{ order.phone_number }}
+                                                </a>
+
+                                            {% else %}
+
+                                                <span class="text-muted">
+                                                    Not provided
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="col-md-6">
+
+                                <div class="contact-detail">
+
+                                    <div
+                                        class="
+                                            d-flex
+                                            align-items-center
+                                            gap-3
+                                        "
+                                    >
+
+                                        <div class="contact-icon">
+                                            <i class="bi bi-whatsapp"></i>
+                                        </div>
+
+                                        <div>
+
+                                            <div class="small text-muted">
+                                                WhatsApp
+                                            </div>
+
+                                            {% if whatsapp_number_available %}
+
+                                                <span
+                                                    class="
+                                                        fw-semibold
+                                                        text-success
+                                                    "
+                                                >
+                                                    Available
+                                                </span>
+
+                                            {% else %}
+
+                                                <span class="text-muted">
+                                                    No valid number
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                {% if not is_closed %}
+
+                    <!-- EMAIL -->
+
+                    <div
+                        class="contact-action-card mb-4"
+                        id="email-section"
+                    >
+
+                        <div class="p-4 border-bottom">
+
+                            <div
+                                class="
+                                    d-flex
+                                    align-items-center
+                                    gap-3
+                                "
+                            >
+
+                                <div class="contact-icon">
+                                    <i class="bi bi-envelope-fill"></i>
+                                </div>
+
+                                <div>
+
+                                    <div class="section-label">
+                                        Email
+                                    </div>
+
+                                    <h3 class="h5 fw-bold mb-0">
+                                        Send Email to Customer
+                                    </h3>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="p-4">
+
+                            <form
+                                method="POST"
+                                enctype="multipart/form-data"
+                                action="#email-section"
+                            >
+
+                                {% csrf_token %}
+
+
+                                <div class="mb-3">
+
+                                    <label class="form-label fw-semibold">
+                                        {{ email_form.subject.label }}
+                                    </label>
+
+                                    {{ email_form.subject }}
+
+                                </div>
+
+
+                                <div class="mb-3">
+
+                                    <label class="form-label fw-semibold">
+                                        {{ email_form.message.label }}
+                                    </label>
+
+                                    {{ email_form.message }}
+
+                                </div>
+
+
+                                <div class="attachment-box mb-4">
+
+                                    <label class="form-label fw-semibold">
+
+                                        <i class="bi bi-paperclip me-1"></i>
+
+                                        {{ email_form.attachment.label }}
+
+                                    </label>
+
+                                    {{ email_form.attachment }}
+
+                                    <div class="form-text mt-2">
+                                        {{ email_form.attachment.help_text }}
+                                    </div>
+
+                                    {% for error in email_form.attachment.errors %}
+
+                                        <div class="text-danger small mt-2">
+                                            {{ error }}
+                                        </div>
+
+                                    {% endfor %}
+
+
+                                    <div
+                                        class="
+                                            selected-file
+                                            small
+                                            fw-semibold
+                                            text-success
+                                            mt-2
+                                            d-none
+                                        "
+                                    >
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        <span></span>
+                                    </div>
+
+                                </div>
+
+
+                                <div class="alert alert-light border small">
+
+                                    <strong>
+                                        K9 email formatting
+                                    </strong>
+
+                                    <div class="text-muted mt-1">
+
+                                        K9 automatically adds the branded
+                                        email header, order reference and
+                                        professional footer.
+
+                                    </div>
+
+                                </div>
+
+
+                                <div
+                                    class="
+                                        d-flex
+                                        justify-content-between
+                                        align-items-center
+                                        flex-wrap
+                                        gap-3
+                                    "
+                                >
+
+                                    <span class="small text-muted">
+                                        To: {{ order.customer_email }}
+                                    </span>
+
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="send_email"
+                                        class="btn btn-dark"
+                                    >
+
+                                        <i class="bi bi-send me-1"></i>
+
+                                        Send Email
+
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- WHATSAPP -->
+
+                    <div
+                        class="contact-action-card mb-4"
+                        id="whatsapp-section"
+                    >
+
+                        <div class="p-4 border-bottom">
+
+                            <div
+                                class="
+                                    d-flex
+                                    align-items-center
+                                    gap-3
+                                "
+                            >
+
+                                <div class="contact-icon">
+                                    <i class="bi bi-whatsapp"></i>
+                                </div>
+
+                                <div>
+
+                                    <div class="section-label">
+                                        WhatsApp
+                                    </div>
+
+                                    <h3 class="h5 fw-bold mb-0">
+                                        Prepare WhatsApp Message
+                                    </h3>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="p-4">
+
+                            {% if whatsapp_number_available %}
+
+                                <form
+                                    method="POST"
+                                    action="#whatsapp-section"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <div class="mb-3">
+
+                                        {{ whatsapp_form.message }}
+
+                                    </div>
+
+
+                                    <div class="d-grid">
+
+                                        <button
+                                            type="submit"
+                                            name="action"
+                                            value="prepare_whatsapp"
+                                            class="btn btn-outline-success"
+                                        >
+                                            <i class="bi bi-whatsapp me-1"></i>
+                                            Prepare WhatsApp
+                                        </button>
+
+                                    </div>
+
+                                </form>
+
+
+                                {% if whatsapp_url %}
+
+                                    <hr>
+
+                                    <div class="alert alert-success">
+
+                                        Message prepared. Open WhatsApp,
+                                        send it, then confirm below.
+
+                                    </div>
+
+
+                                    <div class="d-grid gap-2 d-sm-flex">
+
+                                        <a
+                                            href="{{ whatsapp_url }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="
+                                                btn
+                                                btn-success
+                                                flex-grow-1
+                                            "
+                                        >
+                                            Open WhatsApp
+                                        </a>
+
+
+                                        <form
+                                            method="POST"
+                                            action="#whatsapp-section"
+                                            class="flex-grow-1"
+                                        >
+
+                                            {% csrf_token %}
+
+                                            <input
+                                                type="hidden"
+                                                name="whatsapp_message"
+                                                value="{{ whatsapp_prepared_message }}"
+                                            >
+
+                                            <button
+                                                type="submit"
+                                                name="action"
+                                                value="log_whatsapp_sent"
+                                                class="btn btn-dark w-100"
+                                            >
+                                                Confirm Sent
+                                            </button>
+
+                                        </form>
+
+                                    </div>
+
+                                {% endif %}
+
+                            {% else %}
+
+                                <div class="alert alert-warning mb-0">
+                                    No valid WhatsApp number available.
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- MANUAL CONTACT -->
+
+                    <div
+                        class="contact-action-card mb-4"
+                        id="manual-contact-section"
+                    >
+
+                        <div class="p-4 border-bottom">
+
+                            <div class="section-label">
+                                Manual Contact
+                            </div>
+
+                            <h3 class="h5 fw-bold mb-0">
+                                Log Phone Call or Other Contact
+                            </h3>
+
+                        </div>
+
+
+                        <div class="p-4">
+
+                            <form
+                                method="POST"
+                                action="#manual-contact-section"
+                            >
+
+                                {% csrf_token %}
+
+
+                                <div class="row g-3">
+
+                                    <div class="col-md-6">
+                                        {{ communication_log_form.channel.label_tag }}
+                                        {{ communication_log_form.channel }}
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        {{ communication_log_form.direction.label_tag }}
+                                        {{ communication_log_form.direction }}
+                                    </div>
+
+                                    <div class="col-12">
+                                        {{ communication_log_form.summary.label_tag }}
+                                        {{ communication_log_form.summary }}
+                                    </div>
+
+                                    <div class="col-12">
+                                        {{ communication_log_form.content.label_tag }}
+                                        {{ communication_log_form.content }}
+                                    </div>
+
+                                    <div class="col-md-7">
+                                        {{ communication_log_form.occurred_at.label_tag }}
+                                        {{ communication_log_form.occurred_at }}
+                                    </div>
+
+                                </div>
+
+
+                                <div class="text-end mt-4">
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="log_communication"
+                                        class="btn btn-dark"
+                                    >
+                                        Add to Communications
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+
+                <!-- CONTACT TIMELINE -->
+
+                {% include "orders/includes/communication_timeline.html" with communications=contact_communications title="Customer Contact Timeline" %}
+
+
+                {% if not is_closed %}
+
+                    {% include "orders/includes/workflow_controls.html" %}
+
+                {% endif %}
+
+
+            <!-- =================================================
+                 STEP 3
+            ================================================== -->
+
+            {% elif step == 3 %}
+
+                <!-- INTRO -->
+
+                <div class="wizard-card bg-white mb-4">
+
+                    <div class="card-body p-4 p-lg-5">
+
+                        <div class="section-label mb-2">
+                            Step 3 of 8
+                        </div>
+
+                        <h2 class="h3 fw-bold mb-2">
+                            Design & Specification
+                        </h2>
+
+                        <p class="text-muted mb-0">
+                            Build the design specification, keep
+                            internal working notes and prepare the
+                            final design for customer approval.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- DESIGN STATUS -->
+
+                {% if design.final_design_ready %}
+
+                    <div class="design-status ready mb-4">
+
+                        <div
+                            class="
+                                d-flex
+                                align-items-start
+                                gap-3
+                            "
+                        >
+
+                            <div class="fs-3">
+                                ✓
+                            </div>
+
+                            <div>
+
+                                <div class="fw-bold text-success">
+                                    Final design ready
+                                </div>
+
+                                <div class="small text-muted mt-1">
+                                    This design has been marked ready
+                                    for customer presentation.
+                                </div>
+
+                                {% if design.final_design_sent_at %}
+
+                                    <div class="small mt-2">
+
+                                        Last sent:
+                                        <strong>
+                                            {{ design.final_design_sent_at|date:"d M Y H:i" }}
+                                        </strong>
+
+                                    </div>
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                {% else %}
+
+                    <div class="design-status not-ready mb-4">
+
+                        <div class="fw-bold">
+                            Design still in progress
+                        </div>
+
+                        <div class="small text-muted mt-1">
+                            Complete the specification and final
+                            summary before marking it ready.
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+
+                <!-- ORIGINAL CUSTOMER REQUEST -->
+
+                {% if order.bespoke_request %}
+
+                    <div class="wizard-card bg-white mb-4">
+
+                        <div class="p-4 border-bottom">
+
+                            <div class="section-label">
+                                Original Brief
+                            </div>
+
+                            <h3 class="h5 fw-bold mb-0">
+                                Customer Request
+                            </h3>
+
+                        </div>
+
+
+                        <div class="p-4">
+
+                            <div class="small text-muted mb-2">
+                                Bespoke reference
+                            </div>
+
+                            <div class="fw-bold mb-3">
+                                {{ order.bespoke_request.reference }}
+                            </div>
+
+
+                            {% if workflow.job_title %}
+
+                                <div class="small text-muted mb-1">
+                                    Job
+                                </div>
+
+                                <div>
+                                    {{ workflow.job_title }}
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+
+                <!-- DESIGN RECORD -->
+
+                <div
+                    class="contact-action-card mb-4"
+                    id="design-section"
+                >
+
+                    <div class="p-4 border-bottom">
+
+                        <div class="section-label">
+                            Working Design
+                        </div>
+
+                        <h3 class="h5 fw-bold mb-0">
+                            Design & Specification Record
+                        </h3>
+
+                    </div>
+
+
+                    <div class="p-4">
+
+                        {% if not is_closed %}
+
+                            <form
+                                method="POST"
+                                action="#design-section"
+                            >
+
+                                {% csrf_token %}
+
+
+                                <!-- SPECIFICATION -->
+
+                                <div class="mb-4">
+
+                                    <label class="form-label fw-semibold">
+                                        {{ design_form.specification.label }}
+                                    </label>
+
+                                    {{ design_form.specification }}
+
+                                    <div class="form-text">
+                                        {{ design_form.specification.help_text }}
+                                    </div>
+
+                                </div>
+
+
+                                <!-- INTERNAL NOTES -->
+
+                                <div class="mb-4">
+
+                                    <div class="private-note-box mb-2">
+
+                                        <strong>
+                                            🔒 Staff only
+                                        </strong>
+
+                                        <div class="small text-muted">
+                                            These notes are never included
+                                            automatically in customer emails.
+                                        </div>
+
+                                    </div>
+
+
+                                    <label class="form-label fw-semibold">
+                                        {{ design_form.internal_notes.label }}
+                                    </label>
+
+                                    {{ design_form.internal_notes }}
+
+                                    <div class="form-text">
+                                        {{ design_form.internal_notes.help_text }}
+                                    </div>
+
+                                </div>
+
+
+                                <!-- FINAL SUMMARY -->
+
+                                <div class="mb-4">
+
+                                    <label class="form-label fw-semibold">
+                                        {{ design_form.final_design_summary.label }}
+                                    </label>
+
+                                    {{ design_form.final_design_summary }}
+
+                                    <div class="form-text">
+                                        {{ design_form.final_design_summary.help_text }}
+                                    </div>
+
+
+                                    {% for error in design_form.final_design_summary.errors %}
+
+                                        <div class="text-danger small mt-2">
+                                            {{ error }}
+                                        </div>
+
+                                    {% endfor %}
+
+                                </div>
+
+
+                                <!-- READY -->
+
+                                <div
+                                    class="
+                                        border
+                                        rounded-3
+                                        p-3
+                                        mb-4
+                                    "
+                                >
+
+                                    <div class="form-check">
+
+                                        {{ design_form.final_design_ready }}
+
+                                        <label
+                                            class="
+                                                form-check-label
+                                                fw-bold
+                                            "
+                                            for="{{ design_form.final_design_ready.id_for_label }}"
+                                        >
+                                            Final Design Ready
+                                        </label>
+
+                                    </div>
+
+                                    <div class="small text-muted mt-2">
+
+                                        Mark this only when K9 considers
+                                        the design ready to show to the
+                                        customer.
+
+                                        Customer approval is still handled
+                                        later in Step 5.
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="text-end">
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="save_design"
+                                        class="btn btn-dark"
+                                    >
+
+                                        <i class="bi bi-save me-1"></i>
+
+                                        Save Design
+
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        {% else %}
+
+                            <div class="mb-4">
+
+                                <div class="small text-muted">
+                                    Design Specification
+                                </div>
+
+                                <div class="communication-content">
+                                    {{ design.specification|default:"Not recorded" }}
+                                </div>
+
+                            </div>
+
+
+                            <div class="mb-4">
+
+                                <div class="small text-muted">
+                                    Internal Notes
+                                </div>
+
+                                <div class="communication-content">
+                                    {{ design.internal_notes|default:"Not recorded" }}
+                                </div>
+
+                            </div>
+
+
+                            <div>
+
+                                <div class="small text-muted">
+                                    Final Design Summary
+                                </div>
+
+                                <div class="communication-content">
+                                    {{ design.final_design_summary|default:"Not recorded" }}
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+                <!-- DESIGN EMAIL -->
+
+                {% if not is_closed %}
+
+                    <div
+                        class="contact-action-card mb-4"
+                        id="design-email-section"
+                    >
+
+                        <div class="p-4 border-bottom">
+
+                            <div
+                                class="
+                                    d-flex
+                                    align-items-center
+                                    gap-3
+                                "
+                            >
+
+                                <div class="contact-icon">
+                                    <i class="bi bi-palette"></i>
+                                </div>
+
+                                <div>
+
+                                    <div class="section-label">
+                                        Customer Design Update
+                                    </div>
+
+                                    <h3 class="h5 fw-bold mb-0">
+                                        Email Design to Customer
+                                    </h3>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="p-4">
+
+                            <form
+                                method="POST"
+                                enctype="multipart/form-data"
+                                action="#design-email-section"
+                            >
+
+                                {% csrf_token %}
+
+
+                                <div class="mb-3">
+
+                                    <label class="form-label fw-semibold">
+                                        {{ design_email_form.subject.label }}
+                                    </label>
+
+                                    {{ design_email_form.subject }}
+
+                                </div>
+
+
+                                <div class="mb-3">
+
+                                    <label class="form-label fw-semibold">
+                                        {{ design_email_form.message.label }}
+                                    </label>
+
+                                    {{ design_email_form.message }}
+
+                                </div>
+
+
+                                <div class="attachment-box mb-4">
+
+                                    <label class="form-label fw-semibold">
+
+                                        <i class="bi bi-paperclip me-1"></i>
+
+                                        {{ design_email_form.attachment.label }}
+
+                                    </label>
+
+                                    {{ design_email_form.attachment }}
+
+
+                                    <div class="form-text mt-2">
+                                        {{ design_email_form.attachment.help_text }}
+                                    </div>
+
+
+                                    {% for error in design_email_form.attachment.errors %}
+
+                                        <div class="text-danger small mt-2">
+                                            {{ error }}
+                                        </div>
+
+                                    {% endfor %}
+
+
+                                    <div
+                                        class="
+                                            selected-file
+                                            small
+                                            fw-semibold
+                                            text-success
+                                            mt-2
+                                            d-none
+                                        "
+                                    >
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        <span></span>
+                                    </div>
+
+                                </div>
+
+
+                                <div
+                                    class="
+                                        alert
+                                        alert-light
+                                        border
+                                        small
+                                    "
+                                >
+
+                                    <strong>
+                                        Temporary attachment
+                                    </strong>
+
+                                    <div class="text-muted mt-1">
+
+                                        The photo, document or video is
+                                        attached directly to the email.
+
+                                        K9 records the filename but does
+                                        not permanently store the file.
+
+                                    </div>
+
+                                </div>
+
+
+                                {% if design.final_design_ready %}
+
+                                    <div class="alert alert-success">
+
+                                        <strong>
+                                            Final design is marked ready.
+                                        </strong>
+
+                                        If this email sends successfully,
+                                        K9 will record when the final
+                                        design was sent.
+
+                                    </div>
+
+                                {% endif %}
+
+
+                                <div
+                                    class="
+                                        d-flex
+                                        justify-content-between
+                                        align-items-center
+                                        gap-3
+                                        flex-wrap
+                                    "
+                                >
+
+                                    <span class="small text-muted">
+                                        To:
+                                        {{ order.customer_email }}
+                                    </span>
+
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="send_design_email"
+                                        class="btn btn-dark"
+                                    >
+
+                                        <i class="bi bi-send me-1"></i>
+
+                                        Send Design Email
+
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+
+                <!-- DESIGN COMMUNICATIONS -->
+
+                <div class="wizard-card bg-white mb-4">
+
+                    <div
+                        class="
+                            p-4
+                            border-bottom
+                            d-flex
+                            justify-content-between
+                            align-items-center
+                            flex-wrap
+                            gap-2
+                        "
+                    >
+
+                        <div>
+
+                            <div class="section-label">
+                                Design Communications
+                            </div>
+
+                            <h3 class="h5 fw-bold mb-0">
+                                Design Timeline
+                            </h3>
+
+                        </div>
+
+
+                        <span
+                            class="
+                                badge
+                                bg-light
+                                text-dark
+                                border
+                                rounded-pill
+                                px-3
+                                py-2
+                            "
+                        >
+                            {{ design_communications|length }}
+                            item{{ design_communications|length|pluralize }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="p-4 bg-light">
+
+                        {% if design_communications %}
+
+                            <div class="d-grid gap-3">
+
+                                {% for communication in design_communications %}
+
+                                    <div
+                                        class="
+                                            communication-entry
+                                            {% if communication.direction == 'incoming' %}
+                                                incoming
+                                            {% else %}
+                                                outgoing
+                                            {% endif %}
+                                        "
+                                    >
+
+                                        <div
+                                            class="
+                                                d-flex
+                                                justify-content-between
+                                                flex-wrap
+                                                gap-2
+                                                mb-3
+                                            "
+                                        >
+
+                                            <div class="d-flex gap-2 flex-wrap">
+
+                                                <span class="badge bg-dark">
+                                                    {{ communication.get_direction_display }}
+                                                </span>
+
+                                                <span
+                                                    class="
+                                                        badge
+                                                        bg-light
+                                                        text-dark
+                                                        border
+                                                    "
+                                                >
+                                                    {{ communication.get_channel_display }}
+                                                </span>
+
+                                                {% if communication.status == 'sent' %}
+
+                                                    <span class="badge bg-success">
+                                                        Sent
+                                                    </span>
+
+                                                {% elif communication.status == 'failed' %}
+
+                                                    <span class="badge bg-danger">
+                                                        Failed
+                                                    </span>
+
+                                                {% endif %}
+
+                                            </div>
+
+
+                                            <div class="small text-muted">
+
+                                                {{ communication.occurred_at|date:"d M Y H:i" }}
+
+                                            </div>
+
+                                        </div>
+
+
+                                        {% if communication.subject %}
+
+                                            <div class="fw-bold mb-2">
+                                                {{ communication.subject }}
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        {% if communication.content %}
+
+                                            <div
+                                                class="
+                                                    communication-content
+                                                    small
+                                                    text-secondary
+                                                "
+                                            >
+                                                {{ communication.content }}
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        {% if communication.has_attachment %}
+
+                                            <div class="mt-3">
+
+                                                <div class="small fw-semibold mb-2">
+
+                                                    <i class="bi bi-paperclip me-1"></i>
+
+                                                    Design Attachment{{ communication.attachment_names|length|pluralize }}
+
+                                                </div>
+
+
+                                                {% for attachment_name in communication.attachment_names %}
+
+                                                    <div
+                                                        class="
+                                                            attachment-file
+                                                            small
+                                                            mb-1
+                                                        "
+                                                    >
+                                                        <i class="bi bi-file-earmark me-1"></i>
+
+                                                        {{ attachment_name }}
+                                                    </div>
+
+                                                {% endfor %}
+
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        <div
+                                            class="
+                                                border-top
+                                                mt-3
+                                                pt-2
+                                                small
+                                                text-muted
+                                            "
+                                        >
+
+                                            {% if communication.logged_by %}
+
+                                                Logged by
+
+                                                <strong>
+
+                                                    {% if communication.logged_by.get_full_name %}
+                                                        {{ communication.logged_by.get_full_name }}
+                                                    {% else %}
+                                                        {{ communication.logged_by.username }}
+                                                    {% endif %}
+
+                                                </strong>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                {% endfor %}
+
+                            </div>
+
+                        {% else %}
+
+                            <div
+                                class="
+                                    bg-white
+                                    border
+                                    rounded-3
+                                    p-5
+                                    text-center
+                                "
+                            >
+
+                                <div class="fs-2 mb-2">
+                                    🎨
+                                </div>
+
+                                <div class="fw-bold">
+                                    No design emails sent yet
+                                </div>
+
+                                <div class="small text-muted mt-1">
+
+                                    Design emails and attachments will
+                                    appear here.
+
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+                <!-- WORKFLOW CONTROLS -->
+
+                {% if not is_closed %}
+
+                    <div class="wizard-card bg-white">
+
+                        <div class="p-4 border-bottom">
+
+                            <div class="section-label">
+                                Workflow
+                            </div>
+
+                            <h3 class="h5 fw-bold mb-0">
+                                Design Stage Progress
+                            </h3>
+
+                        </div>
+
+
+                        <div class="p-4">
+
+                            <form method="POST">
+
+                                {% csrf_token %}
+
+
+                                <div class="mb-4">
+
+                                    <label class="form-label fw-semibold">
+                                        {{ form.priority.label }}
+                                    </label>
+
+                                    {{ form.priority }}
+
+                                </div>
+
+
+                                <div class="mb-4">
+
+                                    <label class="form-label fw-semibold">
+                                        {{ form.staff_summary.label }}
+                                    </label>
+
+                                    {{ form.staff_summary }}
+
+                                </div>
+
+
+                                <div class="mb-4">
+
+                                    <label class="form-label fw-semibold">
+                                        {{ form.next_action.label }}
+                                    </label>
+
+                                    {{ form.next_action }}
+
+                                </div>
+
+
+                                <div class="row g-3">
+
+                                    <div class="col-md-7">
+
+                                        <label class="form-label fw-semibold">
+                                            {{ form.next_action_due.label }}
+                                        </label>
+
+                                        {{ form.next_action_due }}
+
+                                    </div>
+
+
+                                    <div
+                                        class="
+                                            col-md-5
+                                            d-flex
+                                            align-items-end
+                                        "
+                                    >
+
+                                        <div
+                                            class="
+                                                border
+                                                rounded-3
+                                                p-3
+                                                w-100
+                                            "
+                                        >
+
+                                            <div class="form-check">
+
+                                                {{ form.customer_waiting }}
+
+                                                <label
+                                                    class="
+                                                        form-check-label
+                                                        fw-semibold
+                                                    "
+                                                    for="{{ form.customer_waiting.id_for_label }}"
+                                                >
+                                                    Waiting for Customer
+                                                </label>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <hr class="my-4">
+
+
+                                <div
+                                    class="
+                                        d-flex
+                                        flex-column
+                                        flex-md-row
+                                        gap-2
+                                    "
+                                >
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="save"
+                                        class="btn btn-outline-dark"
+                                    >
+                                        Save
+                                    </button>
+
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="save_exit"
+                                        class="btn btn-outline-secondary"
+                                    >
+                                        Save & Exit
+                                    </button>
+
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="save_continue"
+                                        class="btn btn-dark ms-md-auto"
+                                    >
+                                        Save & Continue to Quote →
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+
+            <!-- =================================================
+                 OTHER STEPS
+            ================================================== -->
+
+            {% else %}
+
+                <div class="wizard-card bg-white mb-4">
+
+                    <div class="card-body p-4 p-lg-5">
+
+                        <div
+                            class="
+                                small
+                                text-uppercase
+                                text-muted
+                                fw-bold
+                                mb-2
+                            "
+                        >
+                            Step {{ step }} of 8
+                        </div>
+
+                        <h2 class="h3 fw-bold mb-2">
+                            {{ step_data.title }}
+                        </h2>
+
+                        <p class="text-muted mb-4">
+                            {{ step_data.description }}
+                        </p>
+
+
+                        {% if is_closed %}
+
+                            <div class="alert alert-secondary">
+
+                                This job is closed and available
+                                for reference only.
+
+                            </div>
+
+                        {% else %}
+
+                            <form method="POST">
+
+                                {% csrf_token %}
+
+
+                                <div class="mb-4">
+                                    {{ form.priority.label_tag }}
+                                    {{ form.priority }}
+                                </div>
+
+                                <div class="mb-4">
+                                    {{ form.staff_summary.label_tag }}
+                                    {{ form.staff_summary }}
+                                </div>
+
+                                <div class="mb-4">
+                                    {{ form.next_action.label_tag }}
+                                    {{ form.next_action }}
+                                </div>
+
+                                <div class="mb-4">
+                                    {{ form.next_action_due.label_tag }}
+                                    {{ form.next_action_due }}
+                                </div>
+
+
+                                <div class="form-check mb-4">
+
+                                    {{ form.customer_waiting }}
+
+                                    <label
+                                        class="form-check-label"
+                                        for="{{ form.customer_waiting.id_for_label }}"
+                                    >
+                                        Waiting for Customer
+                                    </label>
+
+                                </div>
+
+
+                                <div
+                                    class="
+                                        d-flex
+                                        flex-column
+                                        flex-md-row
+                                        gap-2
+                                    "
+                                >
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="save"
+                                        class="btn btn-outline-dark"
+                                    >
+                                        Save
+                                    </button>
+
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="save_exit"
+                                        class="btn btn-outline-secondary"
+                                    >
+                                        Save & Exit
+                                    </button>
+
+
+                                    {% if step < 8 %}
+
+                                        <button
+                                            type="submit"
+                                            name="action"
+                                            value="save_continue"
+                                            class="btn btn-dark ms-md-auto"
+                                        >
+                                            Save & Continue →
+                                        </button>
+
+                                    {% else %}
+
+                                        <button
+                                            type="submit"
+                                            name="action"
+                                            value="complete_job"
+                                            class="btn btn-success ms-md-auto"
+                                        >
+                                            Complete Job
+                                        </button>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </form>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- =================================================
+             RIGHT SIDEBAR
+        ================================================== -->
+
+        <div class="col-lg-3">
+
+            <div class="sticky-column">
+
+                <div class="wizard-card bg-white mb-4">
+
+                    <div class="card-body p-4">
+
+                        <div
+                            class="
+                                small
+                                text-uppercase
+                                text-muted
+                                fw-bold
+                                mb-3
+                            "
+                        >
+                            Job Summary
+                        </div>
+
+
+                        <div class="summary-panel mb-3">
+
+                            <div class="small text-muted">
+                                Customer
+                            </div>
+
+                            <div class="fw-bold">
+                                {{ order.customer_name }}
+                            </div>
+
+                        </div>
+
+
+                        <div class="summary-panel mb-3">
+
+                            <div class="small text-muted">
+                                Assigned To
+                            </div>
+
+                            <div class="fw-bold">
+
+                                {% if workflow.assigned_to %}
+
+                                    {% if workflow.assigned_to.get_full_name %}
+                                        {{ workflow.assigned_to.get_full_name }}
+                                    {% else %}
+                                        {{ workflow.assigned_to.username }}
+                                    {% endif %}
+
+                                {% else %}
+
+                                    Unassigned
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="summary-panel">
+
+                            <div class="small text-muted">
+                                Priority
+                            </div>
+
+                            <div class="fw-bold">
+                                {{ workflow.get_priority_display }}
+                            </div>
+
+                        </div>
+
+
+                        {% if step == 3 and design %}
+
+                            <div class="summary-panel mt-3">
+
+                                <div class="small text-muted">
+                                    Design Status
+                                </div>
+
+                                {% if design.final_design_ready %}
+
+                                    <div class="fw-bold text-success">
+                                        ✓ Ready
+                                    </div>
+
+                                {% else %}
+
+                                    <div class="fw-bold text-warning">
+                                        In Progress
+                                    </div>
+
+                                {% endif %}
+
+                            </div>
+
+                        {% endif %}
+
+
+                        {% if workflow.customer_waiting %}
+
+                            <div class="alert alert-info mt-3 mb-0">
+
+                                <strong>
+                                    Waiting for Customer
+                                </strong>
+
+                                {% if workflow.customer_waiting_since %}
+
+                                    <div class="small mt-1">
+
+                                        Since
+                                        {{ workflow.customer_waiting_since|date:"d M Y H:i" }}
+
+                                    </div>
+
+                                {% endif %}
+
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+                <!-- ACTIVITY -->
+
+                <div class="wizard-card bg-white">
+
+                    <div class="card-body p-4">
+
+                        <div
+                            class="
+                                small
+                                text-uppercase
+                                text-muted
+                                fw-bold
+                                mb-3
+                            "
+                        >
+                            Recent Activity
+                        </div>
+
+
+                        {% if activity_feed %}
+
+                            {% for item in activity_feed|slice:":8" %}
+
+                                {% if item.kind == 'note' %}
+
+                                    <div class="feed-entry system">
+
+                                        <strong class="small">
+
+                                            {% if item.note.author %}
+
+                                                {% if item.note.author.get_full_name %}
+                                                    {{ item.note.author.get_full_name }}
+                                                {% else %}
+                                                    {{ item.note.author.username }}
+                                                {% endif %}
+
+                                            {% else %}
+
+                                                System
+
+                                            {% endif %}
+
+                                        </strong>
+
+
+                                        <div class="small text-muted mb-1">
+
+                                            {{ item.timestamp|date:"d M Y H:i" }}
+
+                                        </div>
+
+
+                                        <div class="small feed-content">
+
+                                            {{ item.note.content }}
+
+                                        </div>
+
+                                    </div>
+
+
+                                {% else %}
+
+                                    <div class="feed-entry communication">
+
+                                        <div class="small text-muted mb-1">
+
+                                            {{ item.timestamp|date:"d M Y H:i" }}
+
+                                        </div>
+
+                                        <div class="small fw-semibold">
+
+                                            {{ item.communication.get_channel_display }}
+
+                                            ·
+
+                                            {{ item.communication.get_direction_display }}
+
+                                        </div>
+
+                                        <div class="small feed-content">
+
+                                            {% if item.communication.summary %}
+                                                {{ item.communication.summary }}
+                                            {% else %}
+                                                {{ item.communication.content|truncatechars:120 }}
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                {% endif %}
+
+                            {% endfor %}
+
+                        {% else %}
+
+                            <p class="small text-muted mb-0">
+                                No job activity yet.
+                            </p>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+
+        function setupFilePreview(sectionSelector) {
+
+            const section =
+                document.querySelector(sectionSelector);
+
+            if (!section) {
+                return;
+            }
+
+            const input =
+                section.querySelector(
+                    'input[type="file"]'
+                );
+
+            const preview =
+                section.querySelector(
+                    '.selected-file'
+                );
+
+            if (!input || !preview) {
+                return;
+            }
+
+            const filename =
+                preview.querySelector('span');
+
+
+            input.addEventListener(
+                'change',
+                function () {
+
+                    if (
+                        input.files &&
+                        input.files.length > 0
+                    ) {
+
+                        filename.textContent =
+                            input.files[0].name;
+
+                        preview.classList.remove(
+                            'd-none'
+                        );
+
+                    } else {
+
+                        filename.textContent = '';
+
+                        preview.classList.add(
+                            'd-none'
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        setupFilePreview(
+            '#email-section'
+        );
+
+        setupFilePreview(
+            '#design-email-section'
+        );
+
+    }
+);
+</script>
+
+{% endblock %}

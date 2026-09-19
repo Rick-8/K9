@@ -1,282 +1,1904 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Order {{ order.reference_number }} | K9 Project{% endblock %}
+{% block title %}
+    Order {{ order.reference_number }} | K9 Project
+{% endblock %}
+
 
 {% block content %}
-<div class="container py-4">
-    <!-- Header with Quick Action Button -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0 fw-bold">Order: {{ order.reference_number }}</h1>
-        {% if request.user.is_staff and order.status != 'sent' %}
-            <form method="POST" class="m-0">
-                {% csrf_token %}
-                <button type="submit" name="mark_complete" class="btn btn-success shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle me-1" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/></svg>
-                    Mark as Sent (Auto-Stamp Time)
-                </button>
-            </form>
-        {% endif %}
+
+<style>
+    /* =====================================================
+       ORDER DETAIL PAGE
+       Scoped styles so they do not interfere with the
+       remainder of the K9 website.
+    ====================================================== */
+
+    .k9-order-page {
+        --k9-dark: #212529;
+        --k9-soft: #f8f9fa;
+        --k9-border: #e5e7eb;
+        --k9-muted: #6c757d;
+        --k9-radius: 1rem;
+    }
+
+    .k9-order-page .order-hero {
+        background:
+            linear-gradient(
+                135deg,
+                #212529 0%,
+                #343a40 100%
+            );
+        color: white;
+        border-radius: var(--k9-radius);
+        overflow: hidden;
+    }
+
+    .k9-order-page .order-card {
+        border: 1px solid var(--k9-border);
+        border-radius: var(--k9-radius);
+        background: white;
+        box-shadow: 0 0.35rem 1.25rem rgba(0, 0, 0, 0.05);
+    }
+
+    .k9-order-page .section-heading {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--k9-muted);
+        font-weight: 700;
+    }
+
+    .k9-order-page .info-label {
+        font-size: 0.78rem;
+        color: var(--k9-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.25rem;
+    }
+
+    .k9-order-page .info-value {
+        font-weight: 600;
+        color: var(--k9-dark);
+        overflow-wrap: anywhere;
+    }
+
+    .k9-order-page .summary-box {
+        background: var(--k9-soft);
+        border: 1px solid var(--k9-border);
+        border-radius: 0.8rem;
+        padding: 1rem;
+        height: 100%;
+    }
+
+    .k9-order-page .status-dot {
+        width: 0.6rem;
+        height: 0.6rem;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 0.4rem;
+    }
+
+    .k9-order-page .communication-item {
+        border: 1px solid var(--k9-border);
+        border-radius: 0.9rem;
+        padding: 1rem;
+        background: white;
+    }
+
+    .k9-order-page .communication-item.outgoing {
+        border-left: 4px solid #212529;
+    }
+
+    .k9-order-page .communication-item.incoming {
+        border-left: 4px solid #0d6efd;
+    }
+
+    .k9-order-page .communication-message {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        line-height: 1.55;
+    }
+
+    .k9-order-page .activity-line {
+        position: relative;
+        padding-left: 2rem;
+        padding-bottom: 1.5rem;
+    }
+
+    .k9-order-page .activity-line:not(:last-child)::before {
+        content: "";
+        position: absolute;
+        left: 0.43rem;
+        top: 1rem;
+        bottom: 0;
+        width: 2px;
+        background: #dee2e6;
+    }
+
+    .k9-order-page .activity-dot {
+        position: absolute;
+        left: 0;
+        top: 0.25rem;
+        width: 0.9rem;
+        height: 0.9rem;
+        background: #212529;
+        border: 3px solid white;
+        box-shadow: 0 0 0 1px #ced4da;
+        border-radius: 50%;
+        z-index: 1;
+    }
+
+    .k9-order-page .activity-line.system .activity-dot {
+        background: #6c757d;
+    }
+
+    .k9-order-page .activity-content {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        line-height: 1.55;
+    }
+
+    .k9-order-page .sticky-order-panel {
+        position: sticky;
+        top: 1rem;
+    }
+
+    .k9-order-page .contact-link {
+        text-decoration: none;
+        overflow-wrap: anywhere;
+    }
+
+    .k9-order-page .contact-link:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 991.98px) {
+        .k9-order-page .sticky-order-panel {
+            position: static;
+        }
+    }
+</style>
+
+
+<div class="container py-4 k9-order-page">
+
+    <!-- =====================================================
+         PAGE HEADER / HERO
+    ====================================================== -->
+
+    <div class="order-hero shadow-sm mb-4">
+
+        <div class="p-4 p-lg-5">
+
+            <div
+                class="
+                    d-flex
+                    flex-column
+                    flex-lg-row
+                    justify-content-between
+                    align-items-lg-center
+                    gap-4
+                "
+            >
+
+                <div>
+
+                    <div
+                        class="
+                            text-uppercase
+                            small
+                            fw-semibold
+                            text-white-50
+                            mb-2
+                        "
+                    >
+                        K9 Order Management
+                    </div>
+
+                    <div
+                        class="
+                            d-flex
+                            flex-wrap
+                            align-items-center
+                            gap-2
+                            mb-2
+                        "
+                    >
+
+                        <h1 class="h2 fw-bold mb-0">
+                            {{ order.reference_number }}
+                        </h1>
+
+
+                        {% if order.status == 'pending' %}
+
+                            <span
+                                class="
+                                    badge
+                                    rounded-pill
+                                    bg-warning
+                                    text-dark
+                                    px-3
+                                    py-2
+                                "
+                            >
+                                Pending
+                            </span>
+
+                        {% elif order.status == 'processing' %}
+
+                            <span
+                                class="
+                                    badge
+                                    rounded-pill
+                                    bg-info
+                                    text-dark
+                                    px-3
+                                    py-2
+                                "
+                            >
+                                Processing
+                            </span>
+
+                        {% elif order.status == 'sent' %}
+
+                            <span
+                                class="
+                                    badge
+                                    rounded-pill
+                                    bg-success
+                                    px-3
+                                    py-2
+                                "
+                            >
+                                Sent / Complete
+                            </span>
+
+                        {% elif order.status == 'cancelled' %}
+
+                            <span
+                                class="
+                                    badge
+                                    rounded-pill
+                                    bg-danger
+                                    px-3
+                                    py-2
+                                "
+                            >
+                                Cancelled
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="text-white-50">
+
+                        {{ order.customer_name }}
+
+                        {% if order.order_type %}
+
+                            <span class="mx-2">•</span>
+
+                            {{ order.get_order_type_display }}
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="small text-white-50 mt-2">
+
+                        Created:
+                        {{ order.created_at|date:"d M Y H:i" }}
+
+                        {% if order.completed_at %}
+
+                            <span class="mx-2">•</span>
+
+                            Completed:
+                            {{ order.completed_at|date:"d M Y H:i" }}
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+
+                <!-- HERO ACTIONS -->
+
+                <div
+                    class="
+                        d-flex
+                        flex-column
+                        flex-sm-row
+                        gap-2
+                    "
+                >
+
+                    {% if order.order_type == 'bespoke' %}
+
+                        <a
+                            href="{% url 'bespoke_jobs_dashboard' %}"
+                            class="btn btn-outline-light"
+                        >
+                            Bespoke Jobs
+                        </a>
+
+                    {% endif %}
+
+
+                    <a
+                        href="{% url 'order_dashboard' %}"
+                        class="btn btn-light"
+                    >
+                        All Orders
+                    </a>
+
+
+                    {% if order.status != 'sent' and order.status != 'cancelled' %}
+
+                        <form method="POST" class="m-0">
+
+                            {% csrf_token %}
+
+                            <button
+                                type="submit"
+                                name="mark_complete"
+                                value="1"
+                                class="btn btn-success w-100"
+                            >
+                                ✓ Mark as Sent
+                            </button>
+
+                        </form>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
+
+
+    <!-- =====================================================
+         MESSAGES
+    ====================================================== -->
 
     {% if messages %}
-        {% for message in messages %}
-            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
+
+        <div class="mb-4">
+
+            {% for message in messages %}
+
+                <div
+                    class="
+                        alert
+                        {% if message.tags == 'error' %}
+                            alert-danger
+                        {% elif message.tags == 'warning' %}
+                            alert-warning
+                        {% elif message.tags == 'info' %}
+                            alert-info
+                        {% else %}
+                            alert-success
+                        {% endif %}
+                        alert-dismissible
+                        fade
+                        show
+                        shadow-sm
+                    "
+                    role="alert"
+                >
+
+                    {{ message }}
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="alert"
+                        aria-label="Close"
+                    ></button>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
     {% endif %}
 
-    <div class="row g-4 {% if not request.user.is_staff %}justify-content-center{% endif %}">
-        <!-- Left Column: Order Information (Editable for Staff, Read-only for Customers) -->
+
+    <!-- =====================================================
+         AT A GLANCE
+    ====================================================== -->
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-6 col-lg-3">
+
+            <div class="summary-box">
+
+                <div class="info-label">
+                    Status
+                </div>
+
+                <div class="info-value">
+
+                    {% if order.status == 'pending' %}
+
+                        <span class="status-dot bg-warning"></span>
+                        Pending
+
+                    {% elif order.status == 'processing' %}
+
+                        <span class="status-dot bg-info"></span>
+                        Processing
+
+                    {% elif order.status == 'sent' %}
+
+                        <span class="status-dot bg-success"></span>
+                        Sent / Complete
+
+                    {% else %}
+
+                        <span class="status-dot bg-danger"></span>
+                        Cancelled
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-6 col-lg-3">
+
+            <div class="summary-box">
+
+                <div class="info-label">
+                    Order Total
+                </div>
+
+                <div class="info-value fs-5">
+                    £{{ order.order_total|default_if_none:"0.00" }}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-6 col-lg-3">
+
+            <div class="summary-box">
+
+                <div class="info-label">
+                    Tracking
+                </div>
+
+                <div class="info-value">
+                    {{ order.tracking_number|default:"Not assigned" }}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-6 col-lg-3">
+
+            <div class="summary-box">
+
+                <div class="info-label">
+                    Order Type
+                </div>
+
+                <div class="info-value">
+                    {{ order.get_order_type_display|default:"Order" }}
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MAIN ORDER AREA
+    ====================================================== -->
+
+    <div class="row g-4 mb-4">
+
+        <!-- =================================================
+             LEFT COLUMN
+             CUSTOMER / DELIVERY INFORMATION
+        ================================================== -->
+
         <div class="col-lg-5">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-dark text-white fw-semibold">
-                    {% if request.user.is_staff %}Manage Order Information{% else %}Order Information{% endif %}
-                </div>
-                <div class="card-body">
-                    {% if request.user.is_staff %}
-                    <!-- Staff Editable Form -->
-                    <form method="POST" id="orderUpdateForm">
-                        {% csrf_token %}
-                        <!-- Always tells Django this is the main order update form,
-                             including when JavaScript submits it after the cancellation modal. -->
-                        <input type="hidden" name="update_order" value="1">
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Status</label>
-                            <select name="status" id="statusSelect" class="form-select form-select-sm">
-                                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
-                                <option value="processing" {% if order.status == 'processing' %}selected{% endif %}>Processing</option>
-                                <option value="sent" {% if order.status == 'sent' %}selected{% endif %}>Sent / Complete</option>
-                                <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
-                            </select>
-                            {% if order.completed_at %}
-                                <div class="text-muted small mt-1">Completed: {{ order.completed_at|date:"M d, Y H:i" }}</div>
-                            {% endif %}
-                        </div>
 
-                        <!-- Hidden Cancellation Reason field populated by the modal -->
-                        <input type="hidden" name="cancel_reason" id="cancelReasonInput">
+            <div class="sticky-order-panel">
 
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Customer Name</label>
-                            <input type="text" name="customer_name" class="form-control form-control-sm" value="{{ order.customer_name }}" required>
-                        </div>
+                <!-- CUSTOMER INFORMATION -->
 
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Customer Email</label>
-                            <input type="email" name="customer_email" class="form-control form-control-sm" value="{{ order.customer_email }}" required>
-                        </div>
+                <div class="order-card mb-4">
 
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Phone Number</label>
-                            <input type="text" name="phone_number" class="form-control form-control-sm" value="{{ order.phone_number|default:'' }}">
-                        </div>
+                    <div
+                        class="
+                            p-4
+                            border-bottom
+                            d-flex
+                            justify-content-between
+                            align-items-center
+                        "
+                    >
 
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Shipping Address</label>
-                            <textarea name="shipping_address" class="form-control form-control-sm" rows="3">{{ order.shipping_address|default:'' }}</textarea>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <label class="form-label small fw-bold text-muted">Tracking #</label>
-                                <input type="text" name="tracking_number" class="form-control form-control-sm" value="{{ order.tracking_number|default:'' }}">
-                            </div>
-                            <div class="col-6 mb-3">
-                                <label class="form-label small fw-bold text-muted">Order Total (£)</label>
-                                <input type="number" step="0.01" name="order_total" class="form-control form-control-sm" value="{{ order.order_total|default:'0.00' }}">
-                            </div>
-                        </div>
-
-                        <div class="d-grid">
-                            <button type="submit" id="saveOrderBtn" class="btn btn-dark btn-sm">Save All Changes</button>
-                        </div>
-                    </form>
-                    {% else %}
-                    <!-- Customer Read-Only View -->
-                    <div class="mb-3">
-                        <small class="text-muted d-block fw-bold">Status</small>
-                        {% if order.status == 'pending' %}<span class="badge bg-warning text-dark">Pending</span>
-                        {% elif order.status == 'processing' %}<span class="badge bg-info text-dark">Processing</span>
-                        {% elif order.status == 'sent' %}<span class="badge bg-success">Sent / Complete</span>
-                        <div class="text-muted small mt-1">Completed: {{ order.completed_at|date:"M d, Y H:i" }}</div>
-                        {% else %}<span class="badge bg-danger">Cancelled</span>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <small class="text-muted d-block fw-bold">Customer Info</small>
-                        {{ order.customer_name }}<br>
-                        <a href="mailto:{{ order.customer_email }}" class="text-decoration-none">{{ order.customer_email }}</a><br>
-                        {{ order.phone_number|default:"No phone provided" }}
-                    </div>
-
-                    <div class="mb-3">
-                        <small class="text-muted d-block fw-bold">Shipping Address</small>
-                        {{ order.shipping_address|linebreaks|default:"No address provided" }}
-                    </div>
-                    
-                    <hr>
-                    
-                    <div class="d-flex justify-content-between">
                         <div>
-                            <small class="text-muted d-block fw-bold">Tracking #</small>
-                            {{ order.tracking_number|default:"-" }}
+
+                            <div class="section-heading mb-1">
+                                Customer
+                            </div>
+
+                            <h2 class="h5 fw-bold mb-0">
+                                Contact & Delivery
+                            </h2>
+
                         </div>
-                        <div class="text-end">
-                            <small class="text-muted d-block fw-bold">Order Total</small>
-                            £{{ order.order_total|default:"0.00" }}
-                        </div>
+
                     </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
 
-        <!-- Right Column: Interactive Notes System (STAFF ONLY) -->
-        {% if request.user.is_staff %}
-        <div class="col-lg-7">
-            <!-- Note Input Form -->
-            <div class="card shadow-sm border-0 mb-4 bg-light">
-                <div class="card-body">
-                    <form method="POST">
-                        {% csrf_token %}
-                        <div class="mb-2">
-                            <textarea name="note_content" class="form-control" rows="3" placeholder="Type a new internal update..." required></textarea>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <select name="note_type" class="form-select form-select-sm w-auto">
-                                <option value="internal">Internal Staff Note</option>
-                                <option value="system">System Update</option>
-                            </select>
-                            <button type="submit" name="add_note" class="btn btn-dark btn-sm px-4">Post Update</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
 
-            <!-- Notes Timeline -->
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white fw-semibold border-bottom">Internal Staff Log</div>
-                <div class="card-body p-4">
-                    {% if order.notes.all %}
-                        <div class="timeline position-relative" style="border-left: 2px solid #dee2e6; padding-left: 1.5rem;">
-                            {% for note in order.notes.all %}
-                                <div class="mb-4 position-relative">
-                                    <span class="position-absolute translate-middle bg-dark border border-white rounded-circle" style="width: 14px; height: 14px; left: -1.5rem; top: 0.3rem;"></span>
-                                    
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="fw-bold small text-dark">
-                                            {{ note.author.username|default:"System" }}
-                                            {% if note.note_type == 'system' %}<span class="badge bg-secondary ms-1">System</span>
-                                            {% else %}<span class="badge bg-light text-dark border ms-1">Internal</span>{% endif %}
-                                        </span>
-                                        <span class="text-muted small">{{ note.created_at|date:"M d, Y g:i a" }}</span>
-                                    </div>
-                                    <p class="text-secondary mb-0 small" style="white-space: pre-wrap;">{{ note.content }}</p>
+                    <div class="p-4">
+
+                        <div class="mb-4">
+
+                            <div class="info-label">
+                                Customer Name
+                            </div>
+
+                            <div class="info-value fs-5">
+                                {{ order.customer_name }}
+                            </div>
+
+                        </div>
+
+
+                        <div class="mb-4">
+
+                            <div class="info-label">
+                                Email
+                            </div>
+
+                            <a
+                                href="mailto:{{ order.customer_email }}"
+                                class="contact-link"
+                            >
+                                {{ order.customer_email }}
+                            </a>
+
+                        </div>
+
+
+                        <div class="mb-4">
+
+                            <div class="info-label">
+                                Telephone
+                            </div>
+
+                            {% if order.phone_number %}
+
+                                <a
+                                    href="tel:{{ order.phone_number }}"
+                                    class="contact-link"
+                                >
+                                    {{ order.phone_number }}
+                                </a>
+
+                            {% else %}
+
+                                <span class="text-muted">
+                                    No telephone number provided
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <div>
+
+                            <div class="info-label">
+                                Shipping Address
+                            </div>
+
+                            {% if order.shipping_address %}
+
+                                <div class="info-value">
+                                    {{ order.shipping_address|linebreaksbr }}
                                 </div>
-                            {% endfor %}
+
+                            {% else %}
+
+                                <span class="text-muted">
+                                    No shipping address provided
+                                </span>
+
+                            {% endif %}
+
                         </div>
-                    {% else %}
-                        <p class="text-muted text-center mb-0 py-3">No internal activity logged yet.</p>
-                    {% endif %}
+
+                    </div>
+
                 </div>
+
+
+                <!-- =================================================
+                     ORDER MANAGEMENT FORM
+                ================================================== -->
+
+                {% if request.user.is_staff %}
+
+                    <div class="order-card">
+
+                        <div class="p-4 border-bottom">
+
+                            <div class="section-heading mb-1">
+                                Administration
+                            </div>
+
+                            <h2 class="h5 fw-bold mb-0">
+                                Manage Order
+                            </h2>
+
+                        </div>
+
+
+                        <div class="p-4">
+
+                            <form
+                                method="POST"
+                                id="orderUpdateForm"
+                            >
+
+                                {% csrf_token %}
+
+                                <input
+                                    type="hidden"
+                                    name="update_order"
+                                    value="1"
+                                >
+
+
+                                <!-- STATUS -->
+
+                                <div class="mb-4">
+
+                                    <label
+                                        for="statusSelect"
+                                        class="form-label fw-semibold"
+                                    >
+                                        Order Status
+                                    </label>
+
+                                    <select
+                                        name="status"
+                                        id="statusSelect"
+                                        class="form-select"
+                                    >
+
+                                        <option
+                                            value="pending"
+                                            {% if order.status == 'pending' %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            Pending
+                                        </option>
+
+                                        <option
+                                            value="processing"
+                                            {% if order.status == 'processing' %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            Processing
+                                        </option>
+
+                                        <option
+                                            value="sent"
+                                            {% if order.status == 'sent' %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            Sent / Complete
+                                        </option>
+
+                                        <option
+                                            value="cancelled"
+                                            {% if order.status == 'cancelled' %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            Cancelled
+                                        </option>
+
+                                    </select>
+
+
+                                    {% if order.completed_at %}
+
+                                        <div class="form-text">
+
+                                            Completed:
+                                            {{ order.completed_at|date:"d M Y H:i" }}
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <input
+                                    type="hidden"
+                                    name="cancel_reason"
+                                    id="cancelReasonInput"
+                                >
+
+
+                                <!-- CUSTOMER NAME -->
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="customerName"
+                                        class="form-label fw-semibold"
+                                    >
+                                        Customer Name
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="customerName"
+                                        name="customer_name"
+                                        class="form-control"
+                                        value="{{ order.customer_name }}"
+                                        required
+                                    >
+
+                                </div>
+
+
+                                <!-- EMAIL -->
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="customerEmail"
+                                        class="form-label fw-semibold"
+                                    >
+                                        Customer Email
+                                    </label>
+
+                                    <input
+                                        type="email"
+                                        id="customerEmail"
+                                        name="customer_email"
+                                        class="form-control"
+                                        value="{{ order.customer_email }}"
+                                        required
+                                    >
+
+                                </div>
+
+
+                                <!-- PHONE -->
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="phoneNumber"
+                                        class="form-label fw-semibold"
+                                    >
+                                        Phone Number
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        id="phoneNumber"
+                                        name="phone_number"
+                                        class="form-control"
+                                        value="{{ order.phone_number|default:'' }}"
+                                    >
+
+                                </div>
+
+
+                                <!-- ADDRESS -->
+
+                                <div class="mb-3">
+
+                                    <label
+                                        for="shippingAddress"
+                                        class="form-label fw-semibold"
+                                    >
+                                        Shipping Address
+                                    </label>
+
+                                    <textarea
+                                        id="shippingAddress"
+                                        name="shipping_address"
+                                        class="form-control"
+                                        rows="4"
+                                    >{{ order.shipping_address|default:'' }}</textarea>
+
+                                </div>
+
+
+                                <div class="row g-3">
+
+                                    <!-- TRACKING -->
+
+                                    <div class="col-md-6">
+
+                                        <label
+                                            for="trackingNumber"
+                                            class="form-label fw-semibold"
+                                        >
+                                            Tracking Number
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            id="trackingNumber"
+                                            name="tracking_number"
+                                            class="form-control"
+                                            value="{{ order.tracking_number|default:'' }}"
+                                        >
+
+                                    </div>
+
+
+                                    <!-- TOTAL -->
+
+                                    <div class="col-md-6">
+
+                                        <label
+                                            for="orderTotal"
+                                            class="form-label fw-semibold"
+                                        >
+                                            Order Total (£)
+                                        </label>
+
+                                        <input
+                                            type="number"
+                                            id="orderTotal"
+                                            name="order_total"
+                                            class="form-control"
+                                            step="0.01"
+                                            min="0"
+                                            value="{{ order.order_total|default_if_none:'0.00' }}"
+                                        >
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="d-grid mt-4">
+
+                                    <button
+                                        type="submit"
+                                        id="saveOrderBtn"
+                                        class="btn btn-dark"
+                                    >
+                                        Save Order Changes
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
             </div>
+
         </div>
-        {% endif %}
+
+
+        <!-- =================================================
+             RIGHT COLUMN
+             COMMUNICATIONS + ACTIVITY
+        ================================================== -->
+
+        <div class="col-lg-7">
+
+            <!-- =================================================
+                 CUSTOMER COMMUNICATIONS
+            ================================================== -->
+
+            <div class="order-card mb-4">
+
+                <div
+                    class="
+                        p-4
+                        border-bottom
+                        d-flex
+                        flex-column
+                        flex-sm-row
+                        justify-content-between
+                        align-items-sm-center
+                        gap-2
+                    "
+                >
+
+                    <div>
+
+                        <div class="section-heading mb-1">
+                            Customer Contact
+                        </div>
+
+                        <h2 class="h5 fw-bold mb-0">
+                            Communications
+                        </h2>
+
+                    </div>
+
+
+                    <span
+                        class="
+                            badge
+                            bg-light
+                            text-dark
+                            border
+                            rounded-pill
+                            px-3
+                            py-2
+                        "
+                    >
+                        {{ order.communications.all|length }}
+                        communication{{ order.communications.all|length|pluralize }}
+                    </span>
+
+                </div>
+
+
+                <div class="p-4 bg-light">
+
+                    {% if order.communications.all %}
+
+                        <div class="d-grid gap-3">
+
+                            {% for communication in order.communications.all %}
+
+                                <div
+                                    class="
+                                        communication-item
+                                        {% if communication.direction == 'incoming' %}
+                                            incoming
+                                        {% else %}
+                                            outgoing
+                                        {% endif %}
+                                    "
+                                >
+
+                                    <!-- COMMUNICATION HEADER -->
+
+                                    <div
+                                        class="
+                                            d-flex
+                                            flex-column
+                                            flex-md-row
+                                            justify-content-between
+                                            gap-2
+                                            mb-3
+                                        "
+                                    >
+
+                                        <div
+                                            class="
+                                                d-flex
+                                                flex-wrap
+                                                align-items-center
+                                                gap-2
+                                            "
+                                        >
+
+                                            {% if communication.direction == 'incoming' %}
+
+                                                <span
+                                                    class="
+                                                        badge
+                                                        bg-primary
+                                                    "
+                                                >
+                                                    ↓ Incoming
+                                                </span>
+
+                                            {% else %}
+
+                                                <span
+                                                    class="
+                                                        badge
+                                                        bg-dark
+                                                    "
+                                                >
+                                                    ↑ Outgoing
+                                                </span>
+
+                                            {% endif %}
+
+
+                                            <span
+                                                class="
+                                                    badge
+                                                    bg-light
+                                                    text-dark
+                                                    border
+                                                "
+                                            >
+                                                {{ communication.get_channel_display }}
+                                            </span>
+
+
+                                            {% if communication.status %}
+
+                                                <span
+                                                    class="
+                                                        badge
+                                                        bg-light
+                                                        text-secondary
+                                                        border
+                                                    "
+                                                >
+                                                    {{ communication.get_status_display }}
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+                                        <div
+                                            class="
+                                                small
+                                                text-muted
+                                                text-md-end
+                                            "
+                                        >
+
+                                            {{ communication.occurred_at|date:"d M Y H:i" }}
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- SUBJECT -->
+
+                                    {% if communication.subject %}
+
+                                        <div class="fw-bold mb-2">
+                                            {{ communication.subject }}
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    <!-- SUMMARY -->
+
+                                    {% if communication.summary %}
+
+                                        <div
+                                            class="
+                                                small
+                                                fw-semibold
+                                                text-secondary
+                                                mb-2
+                                            "
+                                        >
+                                            {{ communication.summary }}
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    <!-- CONTENT -->
+
+                                    {% if communication.content %}
+
+                                        <div
+                                            class="
+                                                communication-message
+                                                text-dark
+                                                small
+                                            "
+                                        >
+                                            {{ communication.content }}
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    <!-- ATTACHMENTS -->
+
+                                    {% if communication.has_attachment %}
+
+                                        <div
+                                            class="
+                                                mt-3
+                                                p-2
+                                                bg-light
+                                                rounded
+                                                border
+                                            "
+                                        >
+
+                                            <div
+                                                class="
+                                                    small
+                                                    fw-bold
+                                                    mb-1
+                                                "
+                                            >
+                                                📎 Attachments
+                                            </div>
+
+
+                                            {% if communication.attachment_names %}
+
+                                                <div class="small text-muted">
+
+                                                    {% for attachment in communication.attachment_names %}
+
+                                                        <div>
+                                                            {{ attachment }}
+                                                        </div>
+
+                                                    {% endfor %}
+
+                                                </div>
+
+                                            {% endif %}
+
+
+                                            {% if communication.attachment_notes %}
+
+                                                <div class="small mt-1">
+                                                    {{ communication.attachment_notes }}
+                                                </div>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    <!-- LOGGED BY -->
+
+                                    {% if communication.logged_by %}
+
+                                        <div
+                                            class="
+                                                border-top
+                                                mt-3
+                                                pt-2
+                                                small
+                                                text-muted
+                                            "
+                                        >
+
+                                            Logged by
+
+                                            <strong>
+
+                                                {% if communication.logged_by.get_full_name %}
+
+                                                    {{ communication.logged_by.get_full_name }}
+
+                                                {% else %}
+
+                                                    {{ communication.logged_by.username }}
+
+                                                {% endif %}
+
+                                            </strong>
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <div
+                            class="
+                                bg-white
+                                border
+                                rounded-3
+                                text-center
+                                py-5
+                                px-3
+                            "
+                        >
+
+                            <div class="fs-2 mb-2">
+                                ✉
+                            </div>
+
+                            <div class="fw-bold">
+                                No customer communications yet
+                            </div>
+
+                            <div class="small text-muted mt-1">
+                                Emails, phone calls and other customer
+                                contact will appear here as the bespoke
+                                workflow develops.
+                            </div>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 ADD INTERNAL UPDATE
+            ================================================== -->
+
+            {% if request.user.is_staff %}
+
+                <div class="order-card mb-4">
+
+                    <div class="p-4 border-bottom">
+
+                        <div class="section-heading mb-1">
+                            Staff Only
+                        </div>
+
+                        <h2 class="h5 fw-bold mb-0">
+                            Add Internal Update
+                        </h2>
+
+                    </div>
+
+
+                    <div class="p-4">
+
+                        <form method="POST">
+
+                            {% csrf_token %}
+
+
+                            <div class="mb-3">
+
+                                <label
+                                    for="noteContent"
+                                    class="form-label fw-semibold"
+                                >
+                                    Update / Note
+                                </label>
+
+                                <textarea
+                                    id="noteContent"
+                                    name="note_content"
+                                    class="form-control"
+                                    rows="4"
+                                    placeholder="Add an internal note, job update or important information..."
+                                    required
+                                ></textarea>
+
+                            </div>
+
+
+                            <div
+                                class="
+                                    d-flex
+                                    flex-column
+                                    flex-sm-row
+                                    justify-content-between
+                                    align-items-sm-end
+                                    gap-3
+                                "
+                            >
+
+                                <div>
+
+                                    <label
+                                        for="noteType"
+                                        class="form-label fw-semibold"
+                                    >
+                                        Entry Type
+                                    </label>
+
+                                    <select
+                                        id="noteType"
+                                        name="note_type"
+                                        class="form-select"
+                                    >
+
+                                        <option value="internal">
+                                            Internal Staff Note
+                                        </option>
+
+                                        <option value="system">
+                                            System Update
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+
+                                <button
+                                    type="submit"
+                                    name="add_note"
+                                    value="1"
+                                    class="btn btn-dark px-4"
+                                >
+                                    Add to Activity Log
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- =================================================
+                 ACTIVITY / AUDIT LOG
+            ================================================== -->
+
+            <div class="order-card">
+
+                <div
+                    class="
+                        p-4
+                        border-bottom
+                        d-flex
+                        flex-column
+                        flex-sm-row
+                        justify-content-between
+                        align-items-sm-center
+                        gap-2
+                    "
+                >
+
+                    <div>
+
+                        <div class="section-heading mb-1">
+                            Audit Trail
+                        </div>
+
+                        <h2 class="h5 fw-bold mb-0">
+                            Job Activity
+                        </h2>
+
+                    </div>
+
+
+                    <span
+                        class="
+                            badge
+                            bg-light
+                            text-dark
+                            border
+                            rounded-pill
+                            px-3
+                            py-2
+                        "
+                    >
+                        {{ order.notes.all|length }}
+                        entr{{ order.notes.all|length|pluralize:"y,ies" }}
+                    </span>
+
+                </div>
+
+
+                <div class="p-4">
+
+                    {% if order.notes.all %}
+
+                        <div>
+
+                            {% for note in order.notes.all %}
+
+                                <div
+                                    class="
+                                        activity-line
+                                        {% if note.note_type == 'system' %}
+                                            system
+                                        {% endif %}
+                                    "
+                                >
+
+                                    <span class="activity-dot"></span>
+
+
+                                    <!-- ACTIVITY HEADER -->
+
+                                    <div
+                                        class="
+                                            d-flex
+                                            flex-column
+                                            flex-sm-row
+                                            justify-content-between
+                                            gap-1
+                                            mb-2
+                                        "
+                                    >
+
+                                        <div
+                                            class="
+                                                d-flex
+                                                flex-wrap
+                                                align-items-center
+                                                gap-2
+                                            "
+                                        >
+
+                                            <span class="fw-bold">
+
+                                                {% if note.author %}
+
+                                                    {% if note.author.get_full_name %}
+
+                                                        {{ note.author.get_full_name }}
+
+                                                    {% else %}
+
+                                                        {{ note.author.username }}
+
+                                                    {% endif %}
+
+                                                {% else %}
+
+                                                    System
+
+                                                {% endif %}
+
+                                            </span>
+
+
+                                            {% if note.note_type == 'system' %}
+
+                                                <span
+                                                    class="
+                                                        badge
+                                                        bg-secondary
+                                                    "
+                                                >
+                                                    System
+                                                </span>
+
+                                            {% else %}
+
+                                                <span
+                                                    class="
+                                                        badge
+                                                        bg-light
+                                                        text-dark
+                                                        border
+                                                    "
+                                                >
+                                                    Internal Note
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+                                        <div class="small text-muted">
+
+                                            {{ note.created_at|date:"d M Y H:i" }}
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- ACTIVITY CONTENT -->
+
+                                    <div
+                                        class="
+                                            activity-content
+                                            small
+                                            text-secondary
+                                        "
+                                    >
+                                        {{ note.content }}
+                                    </div>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="text-center py-5">
+
+                            <div class="fs-2 mb-2">
+                                🕘
+                            </div>
+
+                            <div class="fw-bold">
+                                No activity recorded yet
+                            </div>
+
+                            <div class="small text-muted mt-1">
+                                Status changes, assignments,
+                                staff notes and workflow changes
+                                will appear here.
+                            </div>
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
+
 </div>
 
-<!-- Cancellation Reason Modal -->
-<div class="modal fade" id="cancelReasonModal" tabindex="-1" aria-labelledby="cancelReasonModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+
+<!-- =========================================================
+     CANCELLATION REASON MODAL
+========================================================== -->
+
+<div
+    class="modal fade"
+    id="cancelReasonModal"
+    tabindex="-1"
+    aria-labelledby="cancelReasonModalLabel"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow">
+
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="cancelReasonModalLabel">Provide Cancellation Reason</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="modalCancelReasonInput" class="form-label fw-bold">Why is this order being cancelled?</label>
-                    <textarea class="form-control" id="modalCancelReasonInput" rows="3" placeholder="e.g., Out of stock, customer requested cancellation"></textarea>
-                    <div class="invalid-feedback">Please provide a reason before cancelling the order.</div>
+
+                <div>
+
+                    <div class="small text-white-50">
+                        K9 Order Cancellation
+                    </div>
+
+                    <h5
+                        class="modal-title"
+                        id="cancelReasonModalLabel"
+                    >
+                        Cancellation Reason
+                    </h5>
+
                 </div>
+
+
+                <button
+                    type="button"
+                    class="btn-close btn-close-white"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
             </div>
+
+
+            <div class="modal-body p-4">
+
+                <p class="text-muted">
+                    Please record why this order is being
+                    cancelled. This reason will be saved in
+                    the permanent activity log.
+                </p>
+
+
+                <div>
+
+                    <label
+                        for="modalCancelReasonInput"
+                        class="form-label fw-bold"
+                    >
+                        Why is this order being cancelled?
+                    </label>
+
+                    <textarea
+                        class="form-control"
+                        id="modalCancelReasonInput"
+                        rows="4"
+                        placeholder="Enter the cancellation reason..."
+                    ></textarea>
+
+                    <div class="invalid-feedback">
+                        Please provide a reason before
+                        cancelling the order.
+                    </div>
+
+                </div>
+
+            </div>
+
+
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger btn-sm" id="confirmCancelBtn">Confirm Cancellation</button>
+
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Go Back
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-danger"
+                    id="confirmCancelBtn"
+                >
+                    Confirm Cancellation
+                </button>
+
             </div>
+
         </div>
+
     </div>
+
 </div>
+
+
+<!-- =========================================================
+     PAGE JAVASCRIPT
+========================================================== -->
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('orderUpdateForm');
-        const statusSelect = document.getElementById('statusSelect');
-        const cancelReasonInput = document.getElementById('cancelReasonInput');
-        const cancelReasonModalElement = document.getElementById('cancelReasonModal');
-        const confirmCancelBtn = document.getElementById('confirmCancelBtn');
-        const modalCancelReasonInput = document.getElementById('modalCancelReasonInput');
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
 
-        if (!form || !statusSelect || !cancelReasonModalElement) {
+        const form =
+            document.getElementById('orderUpdateForm');
+
+        const statusSelect =
+            document.getElementById('statusSelect');
+
+        const cancelReasonInput =
+            document.getElementById('cancelReasonInput');
+
+        const cancelReasonModalElement =
+            document.getElementById('cancelReasonModal');
+
+        const confirmCancelBtn =
+            document.getElementById('confirmCancelBtn');
+
+        const modalCancelReasonInput =
+            document.getElementById(
+                'modalCancelReasonInput'
+            );
+
+
+        if (
+            !form ||
+            !statusSelect ||
+            !cancelReasonModalElement
+        ) {
             return;
         }
 
-        const cancelReasonModal = new bootstrap.Modal(cancelReasonModalElement);
-        const originalStatus = "{{ order.status|escapejs }}";
+
+        const cancelReasonModal =
+            new bootstrap.Modal(
+                cancelReasonModalElement
+            );
+
+
+        const originalStatus =
+            "{{ order.status|escapejs }}";
+
+
         let cancellationConfirmed = false;
 
-        form.addEventListener('submit', function(e) {
-            const isNewCancellation =
-                statusSelect.value === 'cancelled' &&
-                originalStatus !== 'cancelled';
 
-            if (isNewCancellation && !cancellationConfirmed) {
-                e.preventDefault();
-                cancelReasonModal.show();
+        // =================================================
+        // FORM SUBMISSION
+        // =================================================
+
+        form.addEventListener(
+            'submit',
+            function (event) {
+
+                const isNewCancellation =
+                    statusSelect.value === 'cancelled' &&
+                    originalStatus !== 'cancelled';
+
+
+                if (
+                    isNewCancellation &&
+                    !cancellationConfirmed
+                ) {
+
+                    event.preventDefault();
+
+                    cancelReasonModal.show();
+
+                }
+
             }
-        });
+        );
 
-        confirmCancelBtn.addEventListener('click', function() {
-            const reason = modalCancelReasonInput.value.trim();
 
-            if (!reason) {
-                modalCancelReasonInput.classList.add('is-invalid');
+        // =================================================
+        // CONFIRM CANCELLATION
+        // =================================================
+
+        if (confirmCancelBtn) {
+
+            confirmCancelBtn.addEventListener(
+                'click',
+                function () {
+
+                    const reason =
+                        modalCancelReasonInput
+                            .value
+                            .trim();
+
+
+                    if (!reason) {
+
+                        modalCancelReasonInput
+                            .classList
+                            .add('is-invalid');
+
+                        modalCancelReasonInput.focus();
+
+                        return;
+
+                    }
+
+
+                    modalCancelReasonInput
+                        .classList
+                        .remove('is-invalid');
+
+
+                    cancelReasonInput.value =
+                        reason;
+
+
+                    cancellationConfirmed = true;
+
+
+                    cancelReasonModal.hide();
+
+
+                    if (
+                        typeof form.requestSubmit ===
+                        'function'
+                    ) {
+
+                        form.requestSubmit();
+
+                    } else {
+
+                        form.submit();
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        // =================================================
+        // CLEAR VALIDATION WHILE TYPING
+        // =================================================
+
+        if (modalCancelReasonInput) {
+
+            modalCancelReasonInput.addEventListener(
+                'input',
+                function () {
+
+                    if (
+                        modalCancelReasonInput
+                            .value
+                            .trim()
+                    ) {
+
+                        modalCancelReasonInput
+                            .classList
+                            .remove('is-invalid');
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        // =================================================
+        // STATUS CHANGE
+        // =================================================
+
+        statusSelect.addEventListener(
+            'change',
+            function () {
+
+                if (
+                    statusSelect.value !==
+                    'cancelled'
+                ) {
+
+                    cancellationConfirmed = false;
+
+                    cancelReasonInput.value = '';
+
+                    modalCancelReasonInput.value = '';
+
+                    modalCancelReasonInput
+                        .classList
+                        .remove('is-invalid');
+
+                }
+
+            }
+        );
+
+
+        // =================================================
+        // MODAL FOCUS
+        // =================================================
+
+        cancelReasonModalElement.addEventListener(
+            'shown.bs.modal',
+            function () {
+
                 modalCancelReasonInput.focus();
-                return;
+
             }
+        );
 
-            modalCancelReasonInput.classList.remove('is-invalid');
-            cancelReasonInput.value = reason;
-            cancellationConfirmed = true;
-            cancelReasonModal.hide();
-
-            // requestSubmit() re-runs normal form validation. The hidden
-            // update_order field above ensures Django enters the update branch.
-            form.requestSubmit();
-        });
-
-        modalCancelReasonInput.addEventListener('input', function() {
-            if (modalCancelReasonInput.value.trim()) {
-                modalCancelReasonInput.classList.remove('is-invalid');
-            }
-        });
-
-        statusSelect.addEventListener('change', function() {
-            if (statusSelect.value !== 'cancelled') {
-                cancellationConfirmed = false;
-                cancelReasonInput.value = '';
-                modalCancelReasonInput.value = '';
-                modalCancelReasonInput.classList.remove('is-invalid');
-            }
-        });
-
-        cancelReasonModalElement.addEventListener('shown.bs.modal', function() {
-            modalCancelReasonInput.focus();
-        });
-    });
+    }
+);
 </script>
+
 {% endblock %}

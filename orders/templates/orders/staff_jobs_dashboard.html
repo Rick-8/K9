@@ -1,0 +1,793 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    My Jobs | K9
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+    .staff-jobs-page {
+        --k9-border: #e5e7eb;
+        --k9-soft: #f8f9fa;
+    }
+
+    .staff-jobs-page .staff-header {
+        background:
+            linear-gradient(
+                135deg,
+                #212529,
+                #343a40
+            );
+        color: white;
+        border-radius: 1rem;
+    }
+
+    .staff-jobs-page .stat-card,
+    .staff-jobs-page .job-card {
+        border: 1px solid var(--k9-border);
+        border-radius: 1rem;
+        box-shadow:
+            0 0.3rem 1rem
+            rgba(0, 0, 0, 0.04);
+    }
+
+    .staff-jobs-page .job-card {
+        transition:
+            transform 0.15s ease,
+            box-shadow 0.15s ease;
+    }
+
+    .staff-jobs-page .job-card:hover {
+        transform: translateY(-2px);
+        box-shadow:
+            0 0.5rem 1.5rem
+            rgba(0, 0, 0, 0.08);
+    }
+
+    .staff-jobs-page .label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+        font-weight: 700;
+    }
+
+    .staff-jobs-page .waiting-box {
+        background: #e7f5ff;
+        border: 1px solid #b6e0fe;
+        border-radius: 0.75rem;
+    }
+
+    .staff-jobs-page .next-action {
+        background: var(--k9-soft);
+        border-radius: 0.75rem;
+        padding: 0.9rem;
+    }
+</style>
+
+
+<div class="container py-4 staff-jobs-page">
+
+    <!-- =================================================
+         HEADER
+    ================================================== -->
+
+    <div class="staff-header shadow-sm p-4 p-lg-5 mb-4">
+
+        <div
+            class="
+                d-flex
+                flex-column
+                flex-lg-row
+                justify-content-between
+                align-items-lg-center
+                gap-3
+            "
+        >
+
+            <div>
+
+                <div
+                    class="
+                        small
+                        text-uppercase
+                        fw-semibold
+                        text-white-50
+                        mb-2
+                    "
+                >
+                    K9 Staff Workspace
+                </div>
+
+                <h1 class="h2 fw-bold mb-2">
+                    My Jobs
+                </h1>
+
+                <p class="text-white-50 mb-0">
+                    Only bespoke jobs assigned to you
+                    appear on this page.
+                </p>
+
+            </div>
+
+
+            <div>
+
+                <span
+                    class="
+                        badge
+                        bg-light
+                        text-dark
+                        rounded-pill
+                        px-3
+                        py-2
+                    "
+                >
+                    {{ request.user.get_full_name|default:request.user.username }}
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =================================================
+         COUNTS
+    ================================================== -->
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-6 col-lg-3">
+
+            <div class="card stat-card h-100">
+
+                <div class="card-body">
+
+                    <div class="label">
+                        Active Jobs
+                    </div>
+
+                    <div class="fs-2 fw-bold">
+                        {{ job_counts.active }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-6 col-lg-3">
+
+            <div class="card stat-card h-100">
+
+                <div class="card-body">
+
+                    <div class="label">
+                        Waiting
+                    </div>
+
+                    <div class="fs-2 fw-bold">
+                        {{ job_counts.waiting }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-6 col-lg-3">
+
+            <div class="card stat-card h-100">
+
+                <div class="card-body">
+
+                    <div class="label">
+                        Urgent
+                    </div>
+
+                    <div class="fs-2 fw-bold text-danger">
+                        {{ job_counts.urgent }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-6 col-lg-3">
+
+            <div class="card stat-card h-100">
+
+                <div class="card-body">
+
+                    <div class="label">
+                        Completed
+                    </div>
+
+                    <div class="fs-2 fw-bold text-success">
+                        {{ job_counts.completed }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =================================================
+         FILTERS
+    ================================================== -->
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+
+        <div class="card-body p-4">
+
+            <form
+                method="GET"
+                id="staffJobFilters"
+                class="row g-3 align-items-end"
+            >
+
+                <div class="col-12 col-lg-5">
+
+                    <label
+                        for="jobSearch"
+                        class="form-label fw-semibold"
+                    >
+                        Search My Jobs
+                    </label>
+
+                    <input
+                        type="search"
+                        id="jobSearch"
+                        name="q"
+                        value="{{ search_query }}"
+                        class="form-control"
+                        placeholder="Order number, customer, item..."
+                    >
+
+                </div>
+
+
+                <div class="col-12 col-sm-6 col-lg-2">
+
+                    <label
+                        for="stageFilter"
+                        class="form-label fw-semibold"
+                    >
+                        Stage
+                    </label>
+
+                    <select
+                        id="stageFilter"
+                        name="stage"
+                        class="form-select"
+                    >
+
+                        <option value="">
+                            All stages
+                        </option>
+
+                        {% for value, label in stage_choices %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if stage_filter == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div class="col-12 col-sm-6 col-lg-2">
+
+                    <label
+                        for="priorityFilter"
+                        class="form-label fw-semibold"
+                    >
+                        Priority
+                    </label>
+
+                    <select
+                        id="priorityFilter"
+                        name="priority"
+                        class="form-select"
+                    >
+
+                        <option value="">
+                            All priorities
+                        </option>
+
+                        {% for value, label in priority_choices %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if priority_filter == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div class="col-12 col-lg-3">
+
+                    <div class="d-grid">
+
+                        <button
+                            type="submit"
+                            class="btn btn-dark"
+                        >
+                            Apply Filters
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="col-12">
+
+                    <div
+                        class="
+                            d-flex
+                            flex-column
+                            flex-sm-row
+                            justify-content-between
+                            align-items-sm-center
+                            gap-2
+                        "
+                    >
+
+                        <div class="form-check form-switch">
+
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                role="switch"
+                                name="show_closed"
+                                value="1"
+                                id="showClosedSwitch"
+                                {% if show_closed %}
+                                    checked
+                                {% endif %}
+                            >
+
+                            <label
+                                class="form-check-label"
+                                for="showClosedSwitch"
+                            >
+                                Include completed and cancelled jobs
+                            </label>
+
+                        </div>
+
+
+                        <a
+                            href="{% url 'staff_jobs_dashboard' %}"
+                            class="
+                                small
+                                text-decoration-none
+                            "
+                        >
+                            Clear filters
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- =================================================
+         JOBS
+    ================================================== -->
+
+    {% if jobs %}
+
+        <div class="row g-4">
+
+            {% for job in jobs %}
+
+                <div class="col-12">
+
+                    <div class="card job-card">
+
+                        <div class="card-body p-4">
+
+                            <div class="row g-4">
+
+                                <!-- JOB -->
+
+                                <div class="col-lg-4">
+
+                                    <div
+                                        class="
+                                            d-flex
+                                            flex-wrap
+                                            align-items-center
+                                            gap-2
+                                            mb-2
+                                        "
+                                    >
+
+                                        <span class="fw-bold fs-5">
+                                            {{ job.order.reference_number }}
+                                        </span>
+
+
+                                        {% if job.priority == 'urgent' %}
+
+                                            <span class="badge bg-danger">
+                                                Urgent
+                                            </span>
+
+                                        {% elif job.priority == 'high' %}
+
+                                            <span
+                                                class="
+                                                    badge
+                                                    bg-warning
+                                                    text-dark
+                                                "
+                                            >
+                                                High
+                                            </span>
+
+                                        {% else %}
+
+                                            <span
+                                                class="
+                                                    badge
+                                                    bg-light
+                                                    text-dark
+                                                    border
+                                                "
+                                            >
+                                                {{ job.get_priority_display }}
+                                            </span>
+
+                                        {% endif %}
+
+                                    </div>
+
+
+                                    <h2 class="h5 fw-bold mb-2">
+                                        {{ job.job_title }}
+                                    </h2>
+
+
+                                    <div class="text-muted small">
+
+                                        <strong>
+                                            Customer:
+                                        </strong>
+
+                                        {{ job.order.customer_name }}
+
+                                    </div>
+
+
+                                    {% if job.bespoke_reference %}
+
+                                        <div class="text-muted small">
+
+                                            <strong>
+                                                Bespoke:
+                                            </strong>
+
+                                            {{ job.bespoke_reference }}
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <!-- PROGRESS -->
+
+                                <div class="col-md-6 col-lg-3">
+
+                                    <div class="label">
+                                        Current Stage
+                                    </div>
+
+                                    <div class="fw-bold mb-3">
+                                        {{ job.get_stage_display }}
+                                    </div>
+
+
+                                    <div class="label">
+                                        Resume From
+                                    </div>
+
+                                    <div>
+                                        Step {{ job.current_step }}:
+                                        {{ job.resume_label }}
+                                    </div>
+
+                                </div>
+
+
+                                <!-- NEXT ACTION -->
+
+                                <div class="col-md-6 col-lg-3">
+
+                                    {% if job.customer_waiting %}
+
+                                        <div
+                                            class="
+                                                waiting-box
+                                                p-3
+                                                mb-3
+                                            "
+                                        >
+                                            <strong>
+                                                Waiting for Customer
+                                            </strong>
+
+                                            {% if job.customer_waiting_since %}
+
+                                                <div class="small mt-1">
+                                                    Since
+                                                    {{ job.customer_waiting_since|date:"d M Y H:i" }}
+                                                </div>
+
+                                            {% endif %}
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    {% if job.next_action %}
+
+                                        <div class="next-action">
+
+                                            <div class="label mb-1">
+                                                Next Action
+                                            </div>
+
+                                            <div class="small">
+                                                {{ job.next_action }}
+                                            </div>
+
+
+                                            {% if job.next_action_due %}
+
+                                                <div
+                                                    class="
+                                                        small
+                                                        text-muted
+                                                        mt-2
+                                                    "
+                                                >
+                                                    Due:
+                                                    {{ job.next_action_due|date:"d M Y H:i" }}
+                                                </div>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    {% else %}
+
+                                        <div class="text-muted small">
+                                            No next action recorded.
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <!-- ACTION -->
+
+                                <div
+                                    class="
+                                        col-lg-2
+                                        d-flex
+                                        align-items-center
+                                    "
+                                >
+
+                                    <div class="d-grid w-100">
+
+                                        {% if job.stage == 'completed' %}
+
+                                            <a
+                                                href="{% url 'bespoke_job_wizard' job.order.reference_number job.current_step %}"
+                                                class="btn btn-outline-success"
+                                            >
+                                                View Job
+                                            </a>
+
+                                        {% elif job.stage == 'cancelled' %}
+
+                                            <a
+                                                href="{% url 'bespoke_job_wizard' job.order.reference_number job.current_step %}"
+                                                class="btn btn-outline-danger"
+                                            >
+                                                View Job
+                                            </a>
+
+                                        {% elif job.last_worked_at %}
+
+                                            <a
+                                                href="{% url 'bespoke_job_wizard' job.order.reference_number job.current_step %}"
+                                                class="btn btn-dark"
+                                            >
+                                                Resume Job
+                                            </a>
+
+                                        {% else %}
+
+                                            <a
+                                                href="{% url 'bespoke_job_wizard' job.order.reference_number job.current_step %}"
+                                                class="btn btn-dark"
+                                            >
+                                                Start Job
+                                            </a>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            {% if job.last_worked_at %}
+
+                                <hr>
+
+                                <div class="small text-muted">
+
+                                    Last worked:
+                                    {{ job.last_worked_at|date:"d M Y H:i" }}
+
+                                    {% if job.last_worked_by %}
+
+                                        by
+
+                                        {% if job.last_worked_by.get_full_name %}
+
+                                            {{ job.last_worked_by.get_full_name }}
+
+                                        {% else %}
+
+                                            {{ job.last_worked_by.username }}
+
+                                        {% endif %}
+
+                                    {% endif %}
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div
+            class="
+                card
+                border-0
+                shadow-sm
+                rounded-4
+            "
+        >
+
+            <div class="card-body text-center py-5">
+
+                <div class="display-5 mb-3">
+                    🐾
+                </div>
+
+                <h2 class="h4 fw-bold">
+                    No jobs assigned
+                </h2>
+
+                <p class="text-muted mb-0">
+                    You currently have no jobs matching
+                    these filters.
+                </p>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+
+<script>
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+
+        const form =
+            document.getElementById(
+                'staffJobFilters'
+            );
+
+        const switchControl =
+            document.getElementById(
+                'showClosedSwitch'
+            );
+
+
+        if (
+            form &&
+            switchControl
+        ) {
+
+            switchControl.addEventListener(
+                'change',
+                function () {
+
+                    if (
+                        typeof form.requestSubmit ===
+                        'function'
+                    ) {
+
+                        form.requestSubmit();
+
+                    } else {
+
+                        form.submit();
+
+                    }
+
+                }
+            );
+
+        }
+
+    }
+);
+</script>
+
+{% endblock %}
