@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New K9 Bespoke Request</title>
+</head>
+
+<body style="margin:0; padding:0; background:#f4f1ec; font-family:Arial, Helvetica, sans-serif; color:#222;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ec; padding:30px 15px;">
+        <tr>
+            <td align="center">
+
+                <table width="100%" cellpadding="0" cellspacing="0"
+                       style="max-width:760px; background:#ffffff; border-radius:16px; overflow:hidden;">
+
+                    <tr>
+                        <td style="background:#171717; color:#ffffff; padding:28px; text-align:center;">
+
+                            <p style="margin:0 0 8px; text-transform:uppercase; letter-spacing:1px; font-size:13px;">
+                                Staff Notification
+                            </p>
+
+                            <h1 style="margin:0; font-size:28px;">
+                                New Bespoke Request
+                            </h1>
+
+                            <p style="margin:10px 0 0; color:#d9d9d9;">
+                                {{ bespoke.reference }}
+                            </p>
+
+                        </td>
+                    </tr>
+
+
+                    <tr>
+                        <td style="padding:30px;">
+
+                            <div style="background:#fff4d6; border-radius:12px; padding:20px; margin-bottom:25px;">
+
+                                <strong style="font-size:18px;">
+                                    Action required
+                                </strong>
+
+                                <p style="margin:8px 0 0; line-height:1.6;">
+                                    A new bespoke enquiry has been submitted and requires staff review.
+                                    Please review the request and contact the customer if further information
+                                    is needed before preparing a quote.
+                                </p>
+
+                            </div>
+
+
+                            <h2 style="font-size:22px; margin-bottom:15px;">
+                                Request Overview
+                            </h2>
+
+                            <table width="100%" cellpadding="8" cellspacing="0"
+                                   style="border-collapse:collapse; background:#f8f8f8; border-radius:10px;">
+
+                                <tr>
+                                    <td style="font-weight:bold;">Bespoke reference</td>
+                                    <td>{{ bespoke.reference }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td style="font-weight:bold;">Order reference</td>
+                                    <td>{{ order.reference_number }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td style="font-weight:bold;">Customer</td>
+                                    <td>{{ bespoke.customer_name }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td style="font-weight:bold;">Email</td>
+                                    <td>{{ bespoke.email }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td style="font-weight:bold;">Phone</td>
+                                    <td>{{ bespoke.phone|default:"Not provided" }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td style="font-weight:bold;">Preferred contact</td>
+                                    <td>{{ bespoke.get_preferred_contact_display }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td style="font-weight:bold;">Best contact time</td>
+                                    <td>{{ bespoke.best_contact_time|default:"Not provided" }}</td>
+                                </tr>
+
+                                <tr>
+                                    <td style="font-weight:bold;">Status</td>
+                                    <td>{{ bespoke.get_status_display }}</td>
+                                </tr>
+
+                            </table>
+
+
+                            <h2 style="font-size:22px; margin-top:35px;">
+                                1. Customer Idea
+                            </h2>
+
+                            <p>
+                                <strong>Request title:</strong><br>
+                                {{ bespoke.request_title|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Item type:</strong><br>
+                                {{ bespoke.item_type|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Description:</strong><br>
+                                {{ bespoke.description|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+                            <p>
+                                <strong>Inspiration:</strong><br>
+                                {{ bespoke.inspiration_source|default:"Not provided" }}
+                            </p>
+
+
+                            <h2 style="font-size:22px; margin-top:35px;">
+                                2. Recipient & Occasion
+                            </h2>
+
+                            <p>
+                                <strong>Recipient:</strong><br>
+                                {{ bespoke.recipient_name|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Relationship:</strong><br>
+                                {{ bespoke.recipient_relationship|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Age / age range:</strong><br>
+                                {{ bespoke.recipient_age|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Occasion:</strong><br>
+                                {{ bespoke.occasion|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Occasion date:</strong><br>
+                                {% if bespoke.occasion_date %}
+                                    {{ bespoke.occasion_date|date:"j F Y" }}
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </p>
+
+                            <p>
+                                <strong>Interests:</strong><br>
+                                {{ bespoke.recipient_interests|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+                            <p>
+                                <strong>Story / meaning:</strong><br>
+                                {{ bespoke.story_or_meaning|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+
+                            <h2 style="font-size:22px; margin-top:35px;">
+                                3. Design & Personalisation
+                            </h2>
+
+                            <p>
+                                <strong>Style:</strong><br>
+                                {{ bespoke.style|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Theme:</strong><br>
+                                {{ bespoke.theme|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Colours:</strong><br>
+                                {{ bespoke.colours|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Materials:</strong><br>
+                                {{ bespoke.materials|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Size / dimensions:</strong><br>
+                                {{ bespoke.size_or_dimensions|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Personalisation:</strong><br>
+                                {{ bespoke.personalisation_text|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+                            <p>
+                                <strong>Must include:</strong><br>
+                                {{ bespoke.must_include|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+                            <p>
+                                <strong>Avoid:</strong><br>
+                                {{ bespoke.avoid|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+                            <p>
+                                <strong>Finish / display / packaging:</strong><br>
+                                {{ bespoke.finish_notes|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+
+                            <h2 style="font-size:22px; margin-top:35px;">
+                                4. Budget & Practical Details
+                            </h2>
+
+                            <p>
+                                <strong>Quantity:</strong><br>
+                                {{ bespoke.quantity }}
+                            </p>
+
+                            <p>
+                                <strong>Budget:</strong><br>
+                                {{ bespoke.budget_display }}
+                            </p>
+
+                            <p>
+                                <strong>Budget flexible:</strong><br>
+                                {% if bespoke.budget_flexible %}
+                                    Yes
+                                {% else %}
+                                    No
+                                {% endif %}
+                            </p>
+
+                            <p>
+                                <strong>Needed by:</strong><br>
+                                {% if bespoke.needed_by %}
+                                    {{ bespoke.needed_by|date:"j F Y" }}
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </p>
+
+                            <p>
+                                <strong>Deadline flexible:</strong><br>
+                                {% if bespoke.deadline_flexible %}
+                                    Yes
+                                {% else %}
+                                    No
+                                {% endif %}
+                            </p>
+
+                            <p>
+                                <strong>Fulfilment:</strong><br>
+                                {{ bespoke.get_fulfilment_display }}
+                            </p>
+
+                            <p>
+                                <strong>Delivery postcode:</strong><br>
+                                {{ bespoke.delivery_postcode|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Practical notes:</strong><br>
+                                {{ bespoke.practical_notes|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+
+                            <h2 style="font-size:22px; margin-top:35px;">
+                                Staff Next Steps
+                            </h2>
+
+                            <ol style="line-height:1.7; padding-left:20px;">
+                                <li>Review the customer's brief.</li>
+                                <li>Check feasibility, materials and likely production time.</li>
+                                <li>Contact the customer if anything needs clarification.</li>
+                                <li>Agree the final specification.</li>
+                                <li>Prepare and issue the quote.</li>
+                                <li>Do not begin production until the quote has been accepted.</li>
+                            </ol>
+
+
+                            <div style="background:#f7f5f2; border-radius:12px; padding:20px; margin-top:30px;">
+
+                                <strong>Reply shortcut</strong>
+
+                                <p style="margin:8px 0 0; line-height:1.6;">
+                                    Replying directly to this email should address the customer's
+                                    email account:
+                                    <strong>{{ bespoke.email }}</strong>.
+                                </p>
+
+                            </div>
+
+
+                            <p style="margin-top:30px;">
+                                K9 Bespoke System<br>
+                                <strong>{{ bespoke.reference }}</strong>
+                            </p>
+
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

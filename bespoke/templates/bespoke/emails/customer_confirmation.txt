@@ -1,0 +1,148 @@
+K9 BESPOKE REQUEST RECEIVED
+
+Reference: {{ bespoke.reference }}
+
+Hi {{ bespoke.customer_name }},
+
+Thank you for sending us your bespoke gift idea.
+
+We have received your request and a member of the K9 team will review the details you provided.
+
+WHAT HAPPENS NEXT?
+
+1. We will review your bespoke request.
+2. A member of our team may contact you to discuss the design or clarify any details.
+3. We will consider materials, timescale, feasibility and cost.
+4. Once the details are agreed, we can prepare a quote for you.
+5. Nothing will be made or charged until the next steps have been agreed with you.
+
+
+YOUR BESPOKE REQUEST
+
+1. YOUR IDEA
+
+Request name:
+{{ bespoke.request_title|default:"Not provided" }}
+
+Type of item:
+{{ bespoke.item_type|default:"Not provided" }}
+
+Description:
+{{ bespoke.description|default:"Not provided" }}
+
+Inspiration:
+{{ bespoke.inspiration_source|default:"Not provided" }}
+
+
+2. RECIPIENT & OCCASION
+
+Recipient:
+{{ bespoke.recipient_name|default:"Not provided" }}
+
+Relationship:
+{{ bespoke.recipient_relationship|default:"Not provided" }}
+
+Age / age range:
+{{ bespoke.recipient_age|default:"Not provided" }}
+
+Occasion:
+{{ bespoke.occasion|default:"Not provided" }}
+
+Occasion date:
+{% if bespoke.occasion_date %}{{ bespoke.occasion_date|date:"j F Y" }}{% else %}Not provided{% endif %}
+
+Interests:
+{{ bespoke.recipient_interests|default:"Not provided" }}
+
+Story or meaning:
+{{ bespoke.story_or_meaning|default:"Not provided" }}
+
+
+3. DESIGN & PERSONALISATION
+
+Style:
+{{ bespoke.style|default:"Not provided" }}
+
+Theme:
+{{ bespoke.theme|default:"Not provided" }}
+
+Colours:
+{{ bespoke.colours|default:"Not provided" }}
+
+Materials:
+{{ bespoke.materials|default:"Not provided" }}
+
+Size / dimensions:
+{{ bespoke.size_or_dimensions|default:"Not provided" }}
+
+Personalisation:
+{{ bespoke.personalisation_text|default:"Not provided" }}
+
+Must include:
+{{ bespoke.must_include|default:"Not provided" }}
+
+Things to avoid:
+{{ bespoke.avoid|default:"Not provided" }}
+
+Finish / display / packaging:
+{{ bespoke.finish_notes|default:"Not provided" }}
+
+
+4. BUDGET & PRACTICAL DETAILS
+
+Quantity:
+{{ bespoke.quantity }}
+
+Budget:
+{{ bespoke.budget_display }}
+
+Budget flexible:
+{% if bespoke.budget_flexible %}Yes{% else %}No{% endif %}
+
+Needed by:
+{% if bespoke.needed_by %}{{ bespoke.needed_by|date:"j F Y" }}{% else %}Not provided{% endif %}
+
+Deadline flexible:
+{% if bespoke.deadline_flexible %}Yes{% else %}No{% endif %}
+
+Receiving the item:
+{{ bespoke.get_fulfilment_display }}
+
+Delivery postcode:
+{{ bespoke.delivery_postcode|default:"Not provided" }}
+
+Practical notes:
+{{ bespoke.practical_notes|default:"Not provided" }}
+
+
+5. YOUR CONTACT DETAILS
+
+Name:
+{{ bespoke.name|default:"Not provided" }}
+
+Email:
+{{ bespoke.email|default:"Not provided" }}
+
+Phone:
+{{ bespoke.phone|default:"Not provided" }}
+
+Preferred contact:
+{{ bespoke.get_preferred_contact_display }}
+
+Best contact time:
+{{ bespoke.best_contact_time|default:"Not provided" }}
+
+
+PLEASE NOTE
+
+This email confirms that we have received your enquiry.
+
+It is not a confirmed order, final quotation or request for payment.
+
+A member of the K9 team will contact you before anything progresses.
+
+Please keep your reference {{ bespoke.reference }} handy if you contact us about this request.
+
+Thank you,
+
+K9

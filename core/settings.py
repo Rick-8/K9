@@ -71,7 +71,7 @@ INSTALLED_APPS = [
 
     # Local apps
     "home",
-    "bespoke",
+    'bespoke.apps.BespokeConfig',
     "orders",
     "shop",
 ]

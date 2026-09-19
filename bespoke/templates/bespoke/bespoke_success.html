@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}
+Bespoke Request Sent | K9
+{% endblock %}
+
+{% block content %}
+
+<section class="container py-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-8 col-xl-7">
+
+            <div class="card shadow-sm border-0">
+
+                <div class="card-body p-4 p-md-5 text-center">
+
+                    <div class="mb-4">
+
+                        <div
+                            class="bg-dark text-white rounded-circle d-inline-flex align-items-center justify-content-center"
+                            style="width: 70px; height: 70px; font-size: 2rem;"
+                        >
+                            ✓
+                        </div>
+
+                    </div>
+
+                    <p class="text-uppercase small fw-bold text-secondary mb-2">
+                        Request Received
+                    </p>
+
+                    <h1 class="fw-bold mb-3">
+                        Your bespoke idea is now with K9.
+                    </h1>
+
+                    <p class="lead text-secondary">
+                        Your request has been submitted successfully.
+                        Nothing has been ordered or charged yet.
+                    </p>
+
+                    <div class="bg-light rounded p-4 my-4 text-start">
+
+                        <p class="mb-2">
+                            <strong>Reference:</strong>
+                            {{ bespoke.reference }}
+                        </p>
+
+                        <p class="mb-2">
+                            <strong>Request:</strong>
+                            {{ bespoke.request_title|default:bespoke.item_type }}
+                        </p>
+
+                        <p class="mb-2">
+                            <strong>Email:</strong>
+                            {{ bespoke.email }}
+                        </p>
+
+                        <p class="mb-0">
+                            <strong>Status:</strong>
+                            {{ bespoke.get_status_display }}
+                        </p>
+
+                    </div>
+
+                    {% if can_register %}
+
+                        <div class="border rounded p-4 text-start mt-4">
+
+                            <h2 class="h4 fw-bold">
+                                Want to keep track of your request?
+                            </h2>
+
+                            <p class="text-secondary">
+                                Your bespoke enquiry is already safely submitted.
+                                You do not need an account, but you can create one now
+                                and we will link this request to it automatically.
+                            </p>
+
+                            <div class="d-grid gap-2 d-md-flex">
+
+                                <a
+                                    href="{% url 'bespoke_register' bespoke.reference %}"
+                                    class="btn btn-dark flex-grow-1"
+                                >
+                                    Create My Account
+                                </a>
+
+                                <a
+                                    href="{% url 'bespoke_login' bespoke.reference %}"
+                                    class="btn btn-outline-dark flex-grow-1"
+                                >
+                                    I Already Have An Account
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="alert alert-success mt-4">
+
+                            This bespoke request is linked to your K9 account.
+
+                        </div>
+
+                    {% endif %}
+
+                    <div class="mt-4">
+
+                        <a
+                            href="{% url 'bespoke_request' %}?new=1"
+                            class="btn btn-link text-dark"
+                        >
+                            Start Another Bespoke Request
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}

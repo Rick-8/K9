@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>K9 Bespoke Request Confirmation</title>
+</head>
+
+<body style="margin:0; padding:0; background:#f4f1ec; font-family:Arial, Helvetica, sans-serif; color:#222;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ec; padding:30px 15px;">
+        <tr>
+            <td align="center">
+
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:700px; background:#ffffff; border-radius:16px; overflow:hidden;">
+
+                    <tr>
+                        <td style="background:#171717; color:#ffffff; padding:28px; text-align:center;">
+
+                            <h1 style="margin:0; font-size:28px;">
+                                K9 Bespoke Request Received
+                            </h1>
+
+                            <p style="margin:10px 0 0; color:#d9d9d9;">
+                                Reference: {{ bespoke.reference }}
+                            </p>
+
+                        </td>
+                    </tr>
+
+
+                    <tr>
+                        <td style="padding:30px;">
+
+                            <p style="font-size:18px; margin-top:0;">
+                                Hi {{ bespoke.customer_name }},
+                            </p>
+
+                            <p style="line-height:1.6;">
+                                Thank you for sending us your bespoke gift idea.
+                                We have received your request and a member of the K9 team
+                                will review the details you provided.
+                            </p>
+
+                            <div style="background:#f7f5f2; border-radius:12px; padding:20px; margin:25px 0;">
+
+                                <h2 style="margin-top:0; font-size:20px;">
+                                    What happens next?
+                                </h2>
+
+                                <ol style="padding-left:20px; line-height:1.7; margin-bottom:0;">
+                                    <li>We will review your bespoke request.</li>
+                                    <li>A member of our team may contact you to discuss the design or clarify any details.</li>
+                                    <li>We will consider materials, timescale, feasibility and cost.</li>
+                                    <li>Once the details are agreed, we can prepare a quote for you.</li>
+                                    <li>Nothing will be made or charged until the next steps have been agreed with you.</li>
+                                </ol>
+
+                            </div>
+
+
+                            <h2 style="font-size:22px; margin-top:35px;">
+                                Your Bespoke Request
+                            </h2>
+
+
+                            <h3 style="font-size:18px; border-bottom:1px solid #dddddd; padding-bottom:8px;">
+                                1. Your Idea
+                            </h3>
+
+                            <p>
+                                <strong>Request name:</strong><br>
+                                {{ bespoke.request_title|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Type of item:</strong><br>
+                                {{ bespoke.item_type|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Description:</strong><br>
+                                {{ bespoke.description|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+                            <p>
+                                <strong>Inspiration:</strong><br>
+                                {{ bespoke.inspiration_source|default:"Not provided" }}
+                            </p>
+
+
+                            <h3 style="font-size:18px; border-bottom:1px solid #dddddd; padding-bottom:8px; margin-top:30px;">
+                                2. Recipient & Occasion
+                            </h3>
+
+                            <p>
+                                <strong>Recipient:</strong><br>
+                                {{ bespoke.recipient_name|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Relationship:</strong><br>
+                                {{ bespoke.recipient_relationship|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Age / age range:</strong><br>
+                                {{ bespoke.recipient_age|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Occasion:</strong><br>
+                                {{ bespoke.occasion|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Occasion date:</strong><br>
+                                {% if bespoke.occasion_date %}
+                                    {{ bespoke.occasion_date|date:"j F Y" }}
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </p>
+
+                            <p>
+                                <strong>Interests:</strong><br>
+                                {{ bespoke.recipient_interests|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+                            <p>
+                                <strong>Story or meaning:</strong><br>
+                                {{ bespoke.story_or_meaning|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+
+                            <h3 style="font-size:18px; border-bottom:1px solid #dddddd; padding-bottom:8px; margin-top:30px;">
+                                3. Design & Personalisation
+                            </h3>
+
+                            <p>
+                                <strong>Style:</strong><br>
+                                {{ bespoke.style|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Theme:</strong><br>
+                                {{ bespoke.theme|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Colours:</strong><br>
+                                {{ bespoke.colours|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Materials:</strong><br>
+                                {{ bespoke.materials|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Size / dimensions:</strong><br>
+                                {{ bespoke.size_or_dimensions|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Personalisation:</strong><br>
+                                {{ bespoke.personalisation_text|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+                            <p>
+                                <strong>Must include:</strong><br>
+                                {{ bespoke.must_include|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+                            <p>
+                                <strong>Things to avoid:</strong><br>
+                                {{ bespoke.avoid|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+                            <p>
+                                <strong>Finish / display / packaging:</strong><br>
+                                {{ bespoke.finish_notes|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+
+                            <h3 style="font-size:18px; border-bottom:1px solid #dddddd; padding-bottom:8px; margin-top:30px;">
+                                4. Budget & Practical Details
+                            </h3>
+
+                            <p>
+                                <strong>Quantity:</strong><br>
+                                {{ bespoke.quantity }}
+                            </p>
+
+                            <p>
+                                <strong>Budget:</strong><br>
+                                {{ bespoke.budget_display }}
+                            </p>
+
+                            <p>
+                                <strong>Budget flexible:</strong><br>
+                                {% if bespoke.budget_flexible %}
+                                    Yes
+                                {% else %}
+                                    No
+                                {% endif %}
+                            </p>
+
+                            <p>
+                                <strong>Needed by:</strong><br>
+                                {% if bespoke.needed_by %}
+                                    {{ bespoke.needed_by|date:"j F Y" }}
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </p>
+
+                            <p>
+                                <strong>Deadline flexible:</strong><br>
+                                {% if bespoke.deadline_flexible %}
+                                    Yes
+                                {% else %}
+                                    No
+                                {% endif %}
+                            </p>
+
+                            <p>
+                                <strong>Receiving the item:</strong><br>
+                                {{ bespoke.get_fulfilment_display }}
+                            </p>
+
+                            <p>
+                                <strong>Delivery postcode:</strong><br>
+                                {{ bespoke.delivery_postcode|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Practical notes:</strong><br>
+                                {{ bespoke.practical_notes|default:"Not provided"|linebreaksbr }}
+                            </p>
+
+
+                            <h3 style="font-size:18px; border-bottom:1px solid #dddddd; padding-bottom:8px; margin-top:30px;">
+                                5. Your Contact Details
+                            </h3>
+
+                            <p>
+                                <strong>Name:</strong><br>
+                                {{ bespoke.name|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Email:</strong><br>
+                                {{ bespoke.email|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Phone:</strong><br>
+                                {{ bespoke.phone|default:"Not provided" }}
+                            </p>
+
+                            <p>
+                                <strong>Preferred contact:</strong><br>
+                                {{ bespoke.get_preferred_contact_display }}
+                            </p>
+
+                            <p>
+                                <strong>Best contact time:</strong><br>
+                                {{ bespoke.best_contact_time|default:"Not provided" }}
+                            </p>
+
+
+                            <div style="background:#fff4d6; border-radius:12px; padding:20px; margin-top:30px;">
+
+                                <strong>Please note</strong>
+
+                                <p style="margin-bottom:0; line-height:1.6;">
+                                    This email confirms that we have received your enquiry.
+                                    It is not a confirmed order, final quotation or request for payment.
+                                    A member of the K9 team will contact you before anything progresses.
+                                </p>
+
+                            </div>
+
+
+                            <p style="margin-top:30px; line-height:1.6;">
+                                Please keep your reference
+                                <strong>{{ bespoke.reference }}</strong>
+                                handy if you contact us about this request.
+                            </p>
+
+                            <p style="margin-bottom:0;">
+                                Thank you,<br>
+                                <strong>K9</strong>
+                            </p>
+
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>

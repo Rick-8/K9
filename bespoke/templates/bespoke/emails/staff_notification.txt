@@ -1,0 +1,152 @@
+K9 - NEW BESPOKE REQUEST
+
+Action required.
+
+A new bespoke enquiry has been submitted and requires staff review.
+
+Bespoke reference:
+{{ bespoke.reference }}
+
+Order reference:
+{{ order.reference_number }}
+
+Customer:
+{{ bespoke.customer_name }}
+
+Email:
+{{ bespoke.email }}
+
+Phone:
+{{ bespoke.phone|default:"Not provided" }}
+
+Preferred contact:
+{{ bespoke.get_preferred_contact_display }}
+
+Best contact time:
+{{ bespoke.best_contact_time|default:"Not provided" }}
+
+Status:
+{{ bespoke.get_status_display }}
+
+
+==================================================
+1. CUSTOMER IDEA
+==================================================
+
+Request title:
+{{ bespoke.request_title|default:"Not provided" }}
+
+Item type:
+{{ bespoke.item_type|default:"Not provided" }}
+
+Description:
+{{ bespoke.description|default:"Not provided" }}
+
+Inspiration:
+{{ bespoke.inspiration_source|default:"Not provided" }}
+
+
+==================================================
+2. RECIPIENT & OCCASION
+==================================================
+
+Recipient:
+{{ bespoke.recipient_name|default:"Not provided" }}
+
+Relationship:
+{{ bespoke.recipient_relationship|default:"Not provided" }}
+
+Age / age range:
+{{ bespoke.recipient_age|default:"Not provided" }}
+
+Occasion:
+{{ bespoke.occasion|default:"Not provided" }}
+
+Occasion date:
+{% if bespoke.occasion_date %}{{ bespoke.occasion_date|date:"j F Y" }}{% else %}Not provided{% endif %}
+
+Interests:
+{{ bespoke.recipient_interests|default:"Not provided" }}
+
+Story / meaning:
+{{ bespoke.story_or_meaning|default:"Not provided" }}
+
+
+==================================================
+3. DESIGN & PERSONALISATION
+==================================================
+
+Style:
+{{ bespoke.style|default:"Not provided" }}
+
+Theme:
+{{ bespoke.theme|default:"Not provided" }}
+
+Colours:
+{{ bespoke.colours|default:"Not provided" }}
+
+Materials:
+{{ bespoke.materials|default:"Not provided" }}
+
+Size / dimensions:
+{{ bespoke.size_or_dimensions|default:"Not provided" }}
+
+Personalisation:
+{{ bespoke.personalisation_text|default:"Not provided" }}
+
+Must include:
+{{ bespoke.must_include|default:"Not provided" }}
+
+Avoid:
+{{ bespoke.avoid|default:"Not provided" }}
+
+Finish / display / packaging:
+{{ bespoke.finish_notes|default:"Not provided" }}
+
+
+==================================================
+4. BUDGET & PRACTICAL DETAILS
+==================================================
+
+Quantity:
+{{ bespoke.quantity }}
+
+Budget:
+{{ bespoke.budget_display }}
+
+Budget flexible:
+{% if bespoke.budget_flexible %}Yes{% else %}No{% endif %}
+
+Needed by:
+{% if bespoke.needed_by %}{{ bespoke.needed_by|date:"j F Y" }}{% else %}Not provided{% endif %}
+
+Deadline flexible:
+{% if bespoke.deadline_flexible %}Yes{% else %}No{% endif %}
+
+Fulfilment:
+{{ bespoke.get_fulfilment_display }}
+
+Delivery postcode:
+{{ bespoke.delivery_postcode|default:"Not provided" }}
+
+Practical notes:
+{{ bespoke.practical_notes|default:"Not provided" }}
+
+
+==================================================
+STAFF NEXT STEPS
+==================================================
+
+1. Review the customer's brief.
+2. Check feasibility, materials and likely production time.
+3. Contact the customer if anything needs clarification.
+4. Agree the final specification.
+5. Prepare and issue the quote.
+6. Do not begin production until the quote has been accepted.
+
+Replying to this notification should address the customer's email account:
+
+{{ bespoke.email }}
+
+K9 Bespoke System
+{{ bespoke.reference }}

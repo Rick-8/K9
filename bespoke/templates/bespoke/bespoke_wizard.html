@@ -1,0 +1,712 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+Bespoke Request | K9
+{% endblock %}
+
+{% block content %}
+
+<section class="container py-5">
+
+    <div class="row justify-content-center">
+
+        <div class="col-lg-9 col-xl-8">
+
+            <div class="mb-4">
+
+                <p class="text-uppercase small fw-bold text-secondary mb-2">
+                    {{ step_meta.eyebrow }}
+                </p>
+
+                <h1 class="fw-bold mb-3">
+                    {{ step_meta.title }}
+                </h1>
+
+                <p class="lead text-secondary">
+                    {{ step_meta.intro }}
+                </p>
+
+            </div>
+
+            <div class="mb-4">
+
+                <div class="d-flex justify-content-between mb-2">
+
+                    <span>
+                        Step {{ step }} of {{ total_steps }}
+                    </span>
+
+                    <span>
+                        {% widthratio step total_steps 100 %}%
+                    </span>
+
+                </div>
+
+                <div class="progress">
+
+                    <div class="progress-bar bg-dark" role="progressbar"
+                        style="width: {% widthratio step total_steps 100 %}%;"
+                        aria-valuenow="{% widthratio step total_steps 100 %}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="card shadow-sm border-0">
+
+                <div class="card-body p-4 p-md-5">
+
+                    <form method="post" novalidate>
+
+                        {% csrf_token %}
+                        {% if is_review %}
+
+                        <div class="mb-5">
+
+                            <div class="mb-4">
+                                <h2 class="h4 fw-bold mb-2">
+                                    Review Your Bespoke Request
+                                </h2>
+
+                                <p class="text-secondary mb-0">
+                                    Check everything carefully before sending your request.
+                                    If something isn't right, use the Edit button for that section.
+                                </p>
+                            </div>
+
+
+                            <!-- ============================================== -->
+                            <!-- SECTION 1 - YOUR IDEA -->
+                            <!-- ============================================== -->
+
+                            <div class="card border mb-3">
+
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+
+                                    <h3 class="h5 mb-0 fw-bold">
+                                        1. Your Idea
+                                    </h3>
+
+                                    <a href="{% url 'bespoke_step' 1 %}" class="btn btn-sm btn-outline-dark">
+                                        Edit
+                                    </a>
+
+                                </div>
+
+                                <div class="card-body">
+
+                                    <div class="row g-3">
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Request name
+                                            </small>
+
+                                            <strong>
+                                                {{ bespoke.request_title|default:"Not provided" }}
+                                            </strong>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Type of item
+                                            </small>
+
+                                            <strong>
+                                                {{ bespoke.item_type|default:"Not provided" }}
+                                            </strong>
+                                        </div>
+
+
+                                        <div class="col-12">
+                                            <small class="text-secondary d-block">
+                                                Your idea
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.description|default:"Not provided"|linebreaksbr }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-12">
+                                            <small class="text-secondary d-block">
+                                                Inspiration
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.inspiration_source|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- ============================================== -->
+                            <!-- SECTION 2 - RECIPIENT -->
+                            <!-- ============================================== -->
+
+                            <div class="card border mb-3">
+
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+
+                                    <h3 class="h5 mb-0 fw-bold">
+                                        2. Recipient & Occasion
+                                    </h3>
+
+                                    <a href="{% url 'bespoke_step' 2 %}" class="btn btn-sm btn-outline-dark">
+                                        Edit
+                                    </a>
+
+                                </div>
+
+                                <div class="card-body">
+
+                                    <div class="row g-3">
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Recipient
+                                            </small>
+
+                                            <strong>
+                                                {{ bespoke.recipient_name|default:"Not provided" }}
+                                            </strong>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Relationship
+                                            </small>
+
+                                            <strong>
+                                                {{ bespoke.recipient_relationship|default:"Not provided" }}
+                                            </strong>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Age / age range
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.recipient_age|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Occasion
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.occasion|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Occasion date
+                                            </small>
+
+                                            <div>
+                                                {% if bespoke.occasion_date %}
+                                                {{ bespoke.occasion_date|date:"j F Y" }}
+                                                {% else %}
+                                                Not provided
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-12">
+                                            <small class="text-secondary d-block">
+                                                Interests
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.recipient_interests|default:"Not provided"|linebreaksbr }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-12">
+                                            <small class="text-secondary d-block">
+                                                Story or meaning
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.story_or_meaning|default:"Not provided"|linebreaksbr }}
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- ============================================== -->
+                            <!-- SECTION 3 - DESIGN -->
+                            <!-- ============================================== -->
+
+                            <div class="card border mb-3">
+
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+
+                                    <h3 class="h5 mb-0 fw-bold">
+                                        3. Design & Personalisation
+                                    </h3>
+
+                                    <a href="{% url 'bespoke_step' 3 %}" class="btn btn-sm btn-outline-dark">
+                                        Edit
+                                    </a>
+
+                                </div>
+
+                                <div class="card-body">
+
+                                    <div class="row g-3">
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Style
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.style|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Theme
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.theme|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Colours
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.colours|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Materials
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.materials|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Size / dimensions
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.size_or_dimensions|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-12">
+                                            <small class="text-secondary d-block">
+                                                Personalisation
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.personalisation_text|default:"Not provided"|linebreaksbr }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-12">
+                                            <small class="text-secondary d-block">
+                                                Must include
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.must_include|default:"Not provided"|linebreaksbr }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-12">
+                                            <small class="text-secondary d-block">
+                                                Things to avoid
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.avoid|default:"Not provided"|linebreaksbr }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-12">
+                                            <small class="text-secondary d-block">
+                                                Finish / display / packaging
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.finish_notes|default:"Not provided"|linebreaksbr }}
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- ============================================== -->
+                            <!-- SECTION 4 - PRACTICAL DETAILS -->
+                            <!-- ============================================== -->
+
+                            <div class="card border mb-3">
+
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+
+                                    <h3 class="h5 mb-0 fw-bold">
+                                        4. Budget & Practical Details
+                                    </h3>
+
+                                    <a href="{% url 'bespoke_step' 4 %}" class="btn btn-sm btn-outline-dark">
+                                        Edit
+                                    </a>
+
+                                </div>
+
+                                <div class="card-body">
+
+                                    <div class="row g-3">
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Quantity
+                                            </small>
+
+                                            <strong>
+                                                {{ bespoke.quantity }}
+                                            </strong>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Budget
+                                            </small>
+
+                                            <strong>
+                                                {{ bespoke.budget_display }}
+                                            </strong>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Budget flexible?
+                                            </small>
+
+                                            <div>
+                                                {% if bespoke.budget_flexible %}
+                                                Yes
+                                                {% else %}
+                                                No
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Needed by
+                                            </small>
+
+                                            <div>
+                                                {% if bespoke.needed_by %}
+                                                {{ bespoke.needed_by|date:"j F Y" }}
+                                                {% else %}
+                                                Not provided
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Deadline flexible?
+                                            </small>
+
+                                            <div>
+                                                {% if bespoke.deadline_flexible %}
+                                                Yes
+                                                {% else %}
+                                                No
+                                                {% endif %}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Receiving the item
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.get_fulfilment_display }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Delivery postcode
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.delivery_postcode|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-12">
+                                            <small class="text-secondary d-block">
+                                                Practical notes
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.practical_notes|default:"Not provided"|linebreaksbr }}
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- ============================================== -->
+                            <!-- SECTION 5 - CONTACT DETAILS -->
+                            <!-- ============================================== -->
+
+                            <div class="card border mb-4">
+
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+
+                                    <h3 class="h5 mb-0 fw-bold">
+                                        5. Your Contact Details
+                                    </h3>
+
+                                    <a href="{% url 'bespoke_step' 5 %}" class="btn btn-sm btn-outline-dark">
+                                        Edit
+                                    </a>
+
+                                </div>
+
+                                <div class="card-body">
+
+                                    <div class="row g-3">
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Name
+                                            </small>
+
+                                            <strong>
+                                                {{ bespoke.name|default:"Not provided" }}
+                                            </strong>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Email
+                                            </small>
+
+                                            <strong>
+                                                {{ bespoke.email|default:"Not provided" }}
+                                            </strong>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Phone
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.phone|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-md-6">
+                                            <small class="text-secondary d-block">
+                                                Preferred contact
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.get_preferred_contact_display }}
+                                            </div>
+                                        </div>
+
+
+                                        <div class="col-12">
+                                            <small class="text-secondary d-block">
+                                                Best contact time
+                                            </small>
+
+                                            <div>
+                                                {{ bespoke.best_contact_time|default:"Not provided" }}
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="alert alert-info mb-4">
+
+                                <strong>Everything look right?</strong>
+
+                                <div class="mt-1">
+                                    Once you're happy with the details above, confirm the boxes below
+                                    and send your request to K9.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        {% endif %}
+
+                        {% if form.non_field_errors %}
+
+                        <div class="alert alert-danger">
+
+                            {{ form.non_field_errors }}
+
+                        </div>
+
+                        {% endif %}
+
+                        <div class="row g-4">
+
+                            {% for field in form %}
+
+                            <div class="col-12">
+
+                                {% if field.field.widget.input_type == "checkbox" %}
+
+                                <div class="form-check">
+
+                                    {{ field }}
+
+                                    <label class="form-check-label" for="{{ field.id_for_label }}">
+                                        {{ field.label }}
+                                    </label>
+
+                                </div>
+
+                                {% else %}
+
+                                <label class="form-label fw-semibold" for="{{ field.id_for_label }}">
+                                    {{ field.label }}
+                                </label>
+
+                                {{ field }}
+
+                                {% endif %}
+
+                                {% if field.help_text %}
+
+                                <div class="form-text" id="id_{{ field.name }}_help">
+                                    {{ field.help_text }}
+                                </div>
+
+                                {% endif %}
+
+                                {% for error in field.errors %}
+
+                                <div class="text-danger small mt-1">
+                                    {{ error }}
+                                </div>
+
+                                {% endfor %}
+
+                            </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-5">
+
+                            <div>
+
+                                {% if previous_step %}
+
+                                <a href="{% url 'bespoke_step' previous_step %}" class="btn btn-outline-dark">
+                                    ← Back
+                                </a>
+
+                                {% endif %}
+
+                            </div>
+
+                            <button type="submit" class="btn btn-dark px-4">
+
+                                {% if is_review %}
+                                Send Request
+                                {% else %}
+                                Save & Continue →
+                                {% endif %}
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}
