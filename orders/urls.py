@@ -1,5 +1,8 @@
 from django.urls import path
 
+from . import customer_views
+from . import payment_views
+from . import quote_views
 from . import staff_views
 from . import views
 
@@ -7,7 +10,69 @@ from . import views
 urlpatterns = [
 
     # =====================================================
-    # STAFF WORKSPACE
+    # PUBLIC CUSTOMER DESIGN REVIEW
+    # =====================================================
+
+    path(
+        "design-review/<uuid:token>/",
+        customer_views.design_review,
+        name="customer_design_review",
+    ),
+
+
+    # =====================================================
+    # PUBLIC CUSTOMER QUOTE REVIEW / ACCEPTANCE
+    # =====================================================
+
+    path(
+        "quote-review/<uuid:token>/",
+        quote_views.quote_review,
+        name="customer_quote_review",
+    ),
+
+
+    # =====================================================
+    # STRIPE PAYMENT
+    # =====================================================
+
+    path(
+        "payments/stripe/start/<uuid:token>/",
+        payment_views.stripe_start,
+        name="stripe_start",
+    ),
+
+    path(
+        "payments/stripe/return/<uuid:token>/",
+        payment_views.stripe_return,
+        name="stripe_return",
+    ),
+
+    path(
+        "payments/stripe/webhook/",
+        payment_views.stripe_webhook,
+        name="stripe_webhook",
+    ),
+
+
+    # =====================================================
+    # PAYPAL PAYMENT
+    # =====================================================
+
+    path(
+        "payments/paypal/start/<uuid:token>/",
+        payment_views.paypal_start,
+        name="paypal_start",
+    ),
+
+    path(
+        "payments/paypal/return/<uuid:token>/",
+        payment_views.paypal_return,
+        name="paypal_return",
+    ),
+
+
+    # =====================================================
+    # STAFF JOB WORKFLOW
     # =====================================================
 
     path(
@@ -22,8 +87,15 @@ urlpatterns = [
         name="bespoke_job_wizard",
     ),
 
+    path(
+        "staff/quotes/<int:quote_id>/pdf/",
+        staff_views.bespoke_quote_pdf,
+        name="bespoke_quote_pdf",
+    ),
+
+
     # =====================================================
-    # SUPERUSER BESPOKE MANAGEMENT
+    # MANAGEMENT
     # =====================================================
 
     path(
@@ -32,19 +104,15 @@ urlpatterns = [
         name="bespoke_jobs_dashboard",
     ),
 
-    # =====================================================
-    # MASTER ORDER MANAGEMENT
-    # =====================================================
-
     path(
         "dashboard/",
         views.order_dashboard,
         name="order_dashboard",
     ),
 
+
     # =====================================================
-    # ORDER DETAIL
-    # KEEP LAST
+    # ORDER DETAIL - KEEP LAST
     # =====================================================
 
     path(
@@ -52,4 +120,5 @@ urlpatterns = [
         views.order_detail,
         name="order_detail",
     ),
+
 ]

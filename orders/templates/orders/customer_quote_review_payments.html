@@ -1,0 +1,748 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Approve Quote & Pay | {{ order.reference_number }} | K9
+    </title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/style.css' %}"
+    >
+
+    <style>
+
+        body {
+            background:
+                linear-gradient(
+                    180deg,
+                    #f4f5f7 0%,
+                    #ffffff 100%
+                );
+            min-height: 100vh;
+        }
+
+        .quote-review-shell {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .quote-review-card {
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            box-shadow:
+                0 0.75rem 2.5rem
+                rgba(0, 0, 0, 0.08);
+        }
+
+        .quote-review-header {
+            background: #212529;
+            color: #ffffff;
+            padding: 1.5rem;
+        }
+
+        .k9-logo {
+            max-height: 80px;
+            max-width: 180px;
+            object-fit: contain;
+        }
+
+        .section-label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #6c757d;
+        }
+
+        .quote-total-panel {
+            background: #212529;
+            color: #ffffff;
+            border-radius: 1rem;
+            padding: 1.25rem;
+        }
+
+        .quote-total-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.35rem 0;
+        }
+
+        .quote-total-row.total {
+            border-top:
+                1px solid
+                rgba(255, 255, 255, 0.25);
+            margin-top: 0.6rem;
+            padding-top: 0.9rem;
+            font-size: 1.25rem;
+            font-weight: 800;
+        }
+
+        .accepted-panel {
+            background: #d1e7dd;
+            border: 1px solid #badbcc;
+            color: #0f5132;
+            border-radius: 1rem;
+            padding: 1.25rem;
+        }
+
+        .payment-panel {
+            border: 1px solid #dee2e6;
+            border-radius: 1rem;
+            padding: 1.25rem;
+            background: #f8f9fa;
+        }
+
+        .payment-choice {
+            border: 1px solid #dee2e6;
+            border-radius: 1rem;
+            padding: 1rem;
+            background: #ffffff;
+            height: 100%;
+        }
+
+        .payment-choice .btn {
+            min-height: 52px;
+            font-weight: 700;
+        }
+
+        .payment-paid {
+            background: #d1e7dd;
+            border: 1px solid #badbcc;
+            color: #0f5132;
+            border-radius: 1rem;
+            padding: 1.25rem;
+        }
+
+        .payment-provider-mark {
+            font-size: 1.15rem;
+            font-weight: 800;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+    <main class="container py-4 py-md-5">
+
+        <div class="quote-review-shell">
+
+            <div class="quote-review-card">
+
+                <div class="quote-review-header">
+
+                    <div
+                        class="
+                            d-flex
+                            justify-content-between
+                            align-items-center
+                            gap-3
+                            flex-wrap
+                        "
+                    >
+
+                        <img
+                            src="{% static 'media/logo-I.png' %}"
+                            alt="K9"
+                            class="k9-logo"
+                        >
+
+                        <div class="text-md-end">
+
+                            <div class="small text-white-50">
+                                Bespoke Order
+                            </div>
+
+                            <div class="fw-bold">
+                                {{ order.reference_number }}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="p-4 p-md-5">
+
+                    {% if request.GET.payment_success %}
+
+                        <div class="alert alert-success">
+                            <strong>Payment received successfully.</strong>
+                            Your K9 order has moved automatically to production.
+                        </div>
+
+                    {% endif %}
+
+                    {% if request.GET.payment_cancelled %}
+
+                        <div class="alert alert-warning">
+                            Payment was cancelled. No payment has been taken.
+                            You can choose a payment method below when ready.
+                        </div>
+
+                    {% endif %}
+
+                    {% if request.GET.payment_pending %}
+
+                        <div class="alert alert-info">
+                            Your payment is still being confirmed.
+                            Please do not make a second payment while it is processing.
+                        </div>
+
+                    {% endif %}
+
+                    {% if request.GET.payment_error %}
+
+                        <div class="alert alert-danger">
+                            We could not complete that payment attempt.
+                            No successful payment has been recorded.
+                            Please try again or choose the other payment option.
+                        </div>
+
+                    {% endif %}
+
+                    {% if not quote_available %}
+
+                        <div class="alert alert-warning mb-0">
+
+                            <h1 class="h4 fw-bold">
+                                This quotation is no longer available
+                            </h1>
+
+                            <p class="mb-0">
+                                This link may relate to an older quotation.
+                                Please contact K9 if you need the latest quote.
+                            </p>
+
+                        </div>
+
+                    {% elif already_accepted %}
+
+                        <div class="accepted-panel mb-4">
+
+                            <div class="section-label text-success mb-2">
+                                Quote Accepted
+                            </div>
+
+                            <h1 class="h3 fw-bold mb-2">
+                                Thank you, your quote has been accepted.
+                            </h1>
+
+                            <p class="mb-0">
+                                Your K9 order has automatically moved to
+                                the payment stage.
+                            </p>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="mb-4">
+
+                            <div class="section-label mb-2">
+                                Review & Accept
+                            </div>
+
+                            <h1 class="display-6 fw-bold mb-2">
+                                Quote V{{ quote.version }}
+                            </h1>
+
+                            <p class="text-muted mb-0">
+                                Please review the quotation below.
+                                Only accept it when you are happy for
+                                K9 to proceed at the quoted price.
+                            </p>
+
+                        </div>
+
+                    {% endif %}
+
+
+                    {% if quote %}
+
+                        <div class="row g-4 mb-4">
+
+                            <div class="col-md-7">
+
+                                <div class="section-label mb-2">
+                                    Customer
+                                </div>
+
+                                <div class="fw-bold">
+                                    {{ order.customer_name }}
+                                </div>
+
+                                <div class="text-muted">
+                                    {{ order.customer_email }}
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-5">
+
+                                <div class="section-label mb-2">
+                                    Quote
+                                </div>
+
+                                <div class="fw-bold">
+                                    {{ quote.title }}
+                                </div>
+
+                                <div class="text-muted">
+                                    Quote V{{ quote.version }}
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="table-responsive mb-4">
+
+                            <table class="table align-middle">
+
+                                <thead class="table-dark">
+
+                                    <tr>
+
+                                        <th>
+                                            Description
+                                        </th>
+
+                                        <th class="text-end">
+                                            Qty
+                                        </th>
+
+                                        <th class="text-end">
+                                            Unit
+                                        </th>
+
+                                        <th class="text-end">
+                                            Total
+                                        </th>
+
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    {% for line in quote.lines.all %}
+
+                                        <tr>
+
+                                            <td>
+                                                {{ line.description }}
+                                            </td>
+
+                                            <td class="text-end">
+                                                {{ line.quantity }}
+                                            </td>
+
+                                            <td class="text-end">
+                                                £{{ line.unit_price|floatformat:2 }}
+                                            </td>
+
+                                            <td class="text-end fw-semibold">
+                                                £{{ line.line_total|floatformat:2 }}
+                                            </td>
+
+                                        </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+
+                        {% if quote.notes %}
+
+                            <div class="mb-4">
+
+                                <div class="section-label mb-2">
+                                    Quote Notes
+                                </div>
+
+                                <div class="border rounded-3 p-3 bg-light">
+                                    {{ quote.notes|linebreaksbr }}
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <div class="row justify-content-end mb-4">
+
+                            <div class="col-md-6">
+
+                                <div class="quote-total-panel">
+
+                                    <div class="quote-total-row">
+
+                                        <span>
+                                            Subtotal
+                                        </span>
+
+                                        <strong>
+                                            £{{ quote.subtotal|floatformat:2 }}
+                                        </strong>
+
+                                    </div>
+
+                                    <div class="quote-total-row">
+
+                                        <span>
+                                            Delivery
+                                        </span>
+
+                                        <strong>
+                                            £{{ quote.delivery_cost|floatformat:2 }}
+                                        </strong>
+
+                                    </div>
+
+                                    {% if quote.vat_enabled %}
+
+                                        <div class="quote-total-row">
+
+                                            <span>
+                                                VAT @ {{ quote.vat_rate }}%
+                                            </span>
+
+                                            <strong>
+                                                £{{ quote.vat_amount|floatformat:2 }}
+                                            </strong>
+
+                                        </div>
+
+                                    {% else %}
+
+                                        <div class="quote-total-row">
+
+                                            <span>
+                                                VAT
+                                            </span>
+
+                                            <span>
+                                                Not applied
+                                            </span>
+
+                                        </div>
+
+                                    {% endif %}
+
+                                    <div class="quote-total-row total">
+
+                                        <span>
+                                            Total
+                                        </span>
+
+                                        <span>
+                                            £{{ quote.total|floatformat:2 }}
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        {% if already_accepted %}
+
+                            {% if approval.payment_status == 'paid' %}
+
+                                <div
+                                    class="payment-paid"
+                                    id="payment"
+                                >
+
+                                    <div class="section-label text-success mb-2">
+                                        Payment Complete
+                                    </div>
+
+                                    <h2 class="h3 fw-bold mb-2">
+                                        ✓ £{{ approval.amount_due|floatformat:2 }} paid
+                                    </h2>
+
+                                    <p class="mb-2">
+                                        Thank you. Your payment has been confirmed
+                                        and your K9 order has automatically moved
+                                        to production.
+                                    </p>
+
+                                    {% if approval.payment_provider %}
+
+                                        <div class="small">
+                                            Paid via
+                                            <strong>
+                                                {{ approval.get_payment_provider_display }}
+                                            </strong>
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+                            {% else %}
+
+                                <div
+                                    class="payment-panel"
+                                    id="payment"
+                                >
+
+                                    <div class="section-label mb-2">
+                                        Secure Payment
+                                    </div>
+
+                                    <h2 class="h3 fw-bold mb-2">
+                                        Amount due:
+                                        £{{ approval.amount_due|floatformat:2 }}
+                                    </h2>
+
+                                    <p class="text-muted mb-4">
+                                        Your quote is approved. Choose how you
+                                        would like to pay. K9 never receives or
+                                        stores your card or PayPal password.
+                                    </p>
+
+
+                                    <div class="row g-3">
+
+                                        <div class="col-md-6">
+
+                                            <div class="payment-choice">
+
+                                                <div class="payment-provider-mark mb-2">
+                                                    Stripe
+                                                </div>
+
+                                                <p class="small text-muted">
+                                                    Pay securely using Stripe's
+                                                    hosted checkout.
+                                                </p>
+
+                                                <form
+                                                    method="POST"
+                                                    action="{% url 'stripe_start' approval.approval_token %}"
+                                                >
+
+                                                    {% csrf_token %}
+
+                                                    <div class="d-grid">
+
+                                                        <button
+                                                            type="submit"
+                                                            class="btn btn-dark"
+                                                        >
+                                                            Pay £{{ approval.amount_due|floatformat:2 }}
+                                                            with Stripe
+                                                        </button>
+
+                                                    </div>
+
+                                                </form>
+
+                                            </div>
+
+                                        </div>
+
+
+                                        <div class="col-md-6">
+
+                                            <div class="payment-choice">
+
+                                                <div class="payment-provider-mark mb-2">
+                                                    PayPal
+                                                </div>
+
+                                                <p class="small text-muted">
+                                                    Continue securely to PayPal
+                                                    to approve the payment.
+                                                </p>
+
+                                                <form
+                                                    method="POST"
+                                                    action="{% url 'paypal_start' approval.approval_token %}"
+                                                >
+
+                                                    {% csrf_token %}
+
+                                                    <div class="d-grid">
+
+                                                        <button
+                                                            type="submit"
+                                                            class="btn btn-warning"
+                                                        >
+                                                            Pay £{{ approval.amount_due|floatformat:2 }}
+                                                            with PayPal
+                                                        </button>
+
+                                                    </div>
+
+                                                </form>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+
+                                    {% if approval.payment_status == 'processing' %}
+
+                                        <div class="small text-muted mt-3">
+                                            A payment attempt is currently marked
+                                            as processing. If you cancelled or
+                                            returned without paying, you may retry.
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+                            {% endif %}
+
+                        {% elif quote_available %}
+
+                            <hr class="my-4">
+
+
+                            <form method="POST">
+
+                                {% csrf_token %}
+
+                                <div class="mb-4">
+
+                                    <div class="section-label mb-2">
+                                        Acceptance Confirmation
+                                    </div>
+
+                                    <h2 class="h4 fw-bold mb-2">
+                                        Accept Quote V{{ quote.version }}
+                                    </h2>
+
+                                    <p class="text-muted">
+                                        By accepting, you confirm that you
+                                        are happy with this quotation and
+                                        want K9 to move the order to payment.
+                                    </p>
+
+                                </div>
+
+
+                                <div class="row g-3">
+
+                                    <div class="col-md-6">
+
+                                        <label class="form-label fw-semibold">
+                                            {{ form.response_name.label }}
+                                        </label>
+
+                                        {{ form.response_name }}
+
+                                        {% for error in form.response_name.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ error }}
+                                            </div>
+                                        {% endfor %}
+
+                                    </div>
+
+
+                                    <div class="col-md-6">
+
+                                        <label class="form-label fw-semibold">
+                                            {{ form.response_email.label }}
+                                        </label>
+
+                                        {{ form.response_email }}
+
+                                        {% for error in form.response_email.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ error }}
+                                            </div>
+                                        {% endfor %}
+
+                                    </div>
+
+
+                                    <div class="col-12">
+
+                                        <label class="form-label fw-semibold">
+                                            {{ form.approval_notes.label }}
+                                        </label>
+
+                                        {{ form.approval_notes }}
+
+                                    </div>
+
+                                </div>
+
+
+                                <div class="d-grid mt-4">
+
+                                    <button
+                                        type="submit"
+                                        name="action"
+                                        value="accept"
+                                        class="btn btn-dark btn-lg"
+                                    >
+                                        Approve Quote & Continue to Payment
+                                    </button>
+
+                                </div>
+
+                            </form>
+
+                        {% endif %}
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <div class="text-center text-muted small mt-4">
+
+                K9 · Handmade, personalised and bespoke gifts
+
+            </div>
+
+        </div>
+
+    </main>
+
+</body>
+
+</html>

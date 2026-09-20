@@ -4,9 +4,11 @@ from urllib.parse import quote
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.staticfiles import finders
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.db.models import Max, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.html import escape
@@ -17,6 +19,8 @@ from .forms import (
     BespokeDesignMasterForm,
     BespokeDesignVersionForm,
     BespokeJobWorkflowForm,
+    BespokeQuoteForm,
+    BespokeQuoteLineFormSet,
     CommunicationLogForm,
     CustomerEmailForm,
     DesignCustomerEmailForm,
@@ -27,6 +31,8 @@ from .models import (
     BespokeDesign,
     BespokeDesignVersion,
     BespokeOrderWorkflow,
+    BespokeQuote,
+    BespokeApprovalPayment,
     OrderCommunication,
 )
 from .views import sync_bespoke_workflow_with_order
@@ -328,6 +334,25 @@ def build_customer_design_review_url(
         (
             "/orders/design-review/"
             f"{design_version.response_token}/"
+        )
+    )
+
+
+def build_customer_quote_review_url(
+    request,
+    approval_payment,
+):
+    """
+    Build the secure public quote review URL.
+
+    The approval token is the capability used by the customer
+    to review and accept the currently active quote.
+    """
+
+    return request.build_absolute_uri(
+        (
+            "/orders/quote-review/"
+            f"{approval_payment.approval_token}/"
         )
     )
 
@@ -767,6 +792,101 @@ def calculate_file_metadata(
     }
 
 
+def build_next_design_version_initial(
+    design,
+):
+    """
+    Build the starting content for the next design version.
+
+    The previous design description is carried forward so
+    staff do not need to re-enter it manually.
+
+    If the latest design was rejected / changes requested,
+    the customer's feedback is also appended to the customer
+    description and copied into the change summary.
+
+    Example:
+
+        Original design description...
+
+        Customer requested changes from Design V1:
+        Please make the lettering larger.
+    """
+
+    if not design:
+        return {}
+
+    latest_version = (
+        design.latest_version
+    )
+
+    if not latest_version:
+        return {}
+
+    customer_summary = (
+        latest_version
+        .customer_summary
+        .strip()
+    )
+
+    change_summary = ""
+
+    # -----------------------------------------------------
+    # CUSTOMER REQUESTED CHANGES
+    # -----------------------------------------------------
+
+    if (
+        latest_version.status
+        == (
+            BespokeDesignVersion
+            .Status
+            .REJECTED
+        )
+        and latest_version.response_notes
+    ):
+
+        requested_changes = (
+            latest_version
+            .response_notes
+            .strip()
+        )
+
+        if customer_summary:
+
+            customer_summary = (
+                f"{customer_summary}\n\n"
+                "Customer requested changes from "
+                f"{latest_version.version_label}:\n"
+                f"{requested_changes}"
+            )
+
+        else:
+
+            customer_summary = (
+                "Customer requested changes from "
+                f"{latest_version.version_label}:\n"
+                f"{requested_changes}"
+            )
+
+        change_summary = (
+            requested_changes
+        )
+
+    # -----------------------------------------------------
+    # RETURN PREFILLED VALUES FOR NEW VERSION FORM
+    # -----------------------------------------------------
+
+    return {
+        "customer_summary": (
+            customer_summary
+        ),
+
+        "change_summary": (
+            change_summary
+        ),
+    }
+
+
 def supersede_other_active_designs(
     design_version,
 ):
@@ -774,7 +894,11 @@ def supersede_other_active_designs(
     When a newer version is actually sent to the customer,
     older active versions must no longer remain actionable.
 
-    Rejected versions remain rejected.
+    Rejected versions remain rejected so the revision
+    history stays accurate.
+
+    Draft, sent and previously accepted versions become
+    superseded when another design version takes over.
     """
 
     now = timezone.now()
@@ -810,6 +934,190 @@ def supersede_other_active_designs(
             updated_at=now,
         )
     )
+
+
+# =========================================================
+# QUOTE HELPERS
+# =========================================================
+
+def quote_label(quote):
+    """
+    Return the customer/staff-facing quote version label.
+    """
+
+    return f"Quote V{quote.version}"
+
+
+def format_quote_email_message(
+    order,
+    quote,
+    staff_message,
+):
+    """
+    Build the text used inside the branded K9 email.
+
+    All prices and VAT settings come from staff-entered quote
+    data. K9 only formats and calculates the saved values.
+    """
+
+    lines = [
+        staff_message.strip(),
+        "",
+        "----------------------------------------",
+        quote_label(quote).upper(),
+        "----------------------------------------",
+    ]
+
+    for line in quote.lines.all():
+
+        lines.append(
+            f"{line.description} | "
+            f"{line.quantity:g} × £{line.unit_price:.2f} "
+            f"= £{line.line_total:.2f}"
+        )
+
+    lines.extend(
+        [
+            "",
+            f"Subtotal: £{quote.subtotal:.2f}",
+            f"Delivery: £{quote.delivery_cost:.2f}",
+        ]
+    )
+
+    if quote.vat_enabled:
+
+        vat_delivery_text = (
+            "including delivery"
+            if quote.vat_on_delivery
+            else "excluding delivery"
+        )
+
+        lines.extend(
+            [
+                (
+                    f"VAT @ {quote.vat_rate:g}% "
+                    f"({vat_delivery_text}): "
+                    f"£{quote.vat_amount:.2f}"
+                ),
+            ]
+        )
+
+    else:
+
+        lines.append(
+            "VAT: Not applied"
+        )
+
+    lines.append(
+        f"TOTAL: £{quote.total:.2f}"
+    )
+
+    if quote.notes:
+        lines.extend(
+            [
+                "",
+                "Quote notes:",
+                quote.notes.strip(),
+            ]
+        )
+
+    lines.extend(
+        [
+            "",
+            (
+                "Please review this quotation. If anything needs "
+                "changing, reply to this email or contact K9 and "
+                "we can prepare a revised quote."
+            ),
+            "",
+            (
+                "When you are happy with the quotation, use the "
+                "Approve Quote & Pay button in this email. Once "
+                "accepted, K9 will move your order to the payment "
+                "stage."
+            ),
+        ]
+    )
+
+    return "\n".join(lines)
+
+
+def supersede_other_active_quotes(
+    selected_quote,
+):
+    """
+    Keep one customer-facing quote active at a time.
+
+    If a revised quote is sent, any older draft, sent or
+    accepted quote becomes superseded. This prevents an old
+    acceptance from keeping the payment stage unlocked.
+    """
+
+    (
+        selected_quote
+        .workflow
+        .quotes
+        .exclude(pk=selected_quote.pk)
+        .filter(
+            status__in=[
+                BespokeQuote.Status.DRAFT,
+                BespokeQuote.Status.SENT,
+                BespokeQuote.Status.ACCEPTED,
+            ]
+        )
+        .update(
+            status=BespokeQuote.Status.SUPERSEDED,
+            updated_at=timezone.now(),
+        )
+    )
+
+
+def clone_quote_revision(
+    source_quote,
+    user,
+):
+    """
+    Create a new draft quote by copying the previous version,
+    including every line item.
+    """
+
+    with transaction.atomic():
+
+        highest_version = (
+            source_quote
+            .workflow
+            .quotes
+            .aggregate(maximum=Max("version"))
+            .get("maximum")
+            or 0
+        )
+
+        new_quote = BespokeQuote.objects.create(
+            workflow=source_quote.workflow,
+            version=highest_version + 1,
+            status=BespokeQuote.Status.DRAFT,
+            title=source_quote.title,
+            notes=source_quote.notes,
+            delivery_cost=source_quote.delivery_cost,
+            vat_enabled=source_quote.vat_enabled,
+            vat_rate=source_quote.vat_rate,
+            vat_on_delivery=source_quote.vat_on_delivery,
+            created_by=user,
+        )
+
+        for source_line in source_quote.lines.all():
+
+            new_quote.lines.create(
+                description=source_line.description,
+                quantity=source_line.quantity,
+                unit_price=source_line.unit_price,
+                sort_order=source_line.sort_order,
+            )
+
+        new_quote.recalculate_totals()
+        new_quote.refresh_from_db()
+
+    return new_quote
 
 
 # =========================================================
@@ -1086,6 +1394,779 @@ def log_workflow_field_changes(
             user=user,
             message=change,
         )
+
+
+
+
+# =========================================================
+# STEP 4 - QUOTE PDF
+# =========================================================
+
+@staff_member_required
+def bespoke_quote_pdf(
+    request,
+    quote_id,
+):
+    """
+    Generate the saved quotation as a PDF.
+
+    Superusers may view any bespoke quote.
+    Ordinary staff may only view quotes belonging to jobs
+    assigned to them.
+
+    ?download=1 changes the response from inline viewing to
+    a downloadable PDF.
+    """
+
+    quote_query = (
+        BespokeQuote.objects
+        .select_related(
+            "workflow",
+            "workflow__order",
+            "workflow__assigned_to",
+            "created_by",
+        )
+        .prefetch_related(
+            "lines"
+        )
+    )
+
+    if not request.user.is_superuser:
+
+        quote_query = quote_query.filter(
+            workflow__assigned_to=request.user
+        )
+
+    selected_quote = get_object_or_404(
+        quote_query,
+        pk=quote_id,
+    )
+
+    order = selected_quote.workflow.order
+
+    selected_quote.recalculate_totals()
+    selected_quote.refresh_from_db()
+
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_RIGHT
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import (
+            ParagraphStyle,
+            getSampleStyleSheet,
+        )
+        from reportlab.lib.units import mm
+        from reportlab.platypus import (
+            Image,
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+            Table,
+            TableStyle,
+        )
+
+    except ImportError:
+
+        return HttpResponse(
+            (
+                "PDF support requires ReportLab. "
+                "Install it with: pip install reportlab"
+            ),
+            status=500,
+            content_type="text/plain",
+        )
+
+    filename = (
+        f"K9-{order.reference_number}-"
+        f"Quote-V{selected_quote.version}.pdf"
+    )
+
+    download_requested = (
+        request.GET.get("download")
+        == "1"
+    )
+
+    disposition = (
+        "attachment"
+        if download_requested
+        else "inline"
+    )
+
+    response = HttpResponse(
+        content_type="application/pdf"
+    )
+
+    response[
+        "Content-Disposition"
+    ] = (
+        f'{disposition}; filename="{filename}"'
+    )
+
+    document = SimpleDocTemplate(
+        response,
+        pagesize=A4,
+        rightMargin=18 * mm,
+        leftMargin=18 * mm,
+        topMargin=18 * mm,
+        bottomMargin=18 * mm,
+        title=(
+            f"K9 Quote V{selected_quote.version}"
+        ),
+        author="K9",
+    )
+
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "K9QuoteTitle",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=22,
+        leading=26,
+        textColor=colors.HexColor("#212529"),
+        spaceAfter=6,
+    )
+
+    subtitle_style = ParagraphStyle(
+        "K9QuoteSubtitle",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=14,
+        textColor=colors.HexColor("#6c757d"),
+        spaceAfter=14,
+    )
+
+    heading_style = ParagraphStyle(
+        "K9QuoteHeading",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=11,
+        leading=14,
+        textColor=colors.HexColor("#212529"),
+        spaceBefore=8,
+        spaceAfter=6,
+    )
+
+    normal_style = ParagraphStyle(
+        "K9QuoteNormal",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9.5,
+        leading=14,
+        textColor=colors.HexColor("#343a40"),
+    )
+
+    right_style = ParagraphStyle(
+        "K9QuoteRight",
+        parent=normal_style,
+        alignment=TA_RIGHT,
+        textColor=colors.HexColor("#111111"),
+    )
+
+    table_header_style = ParagraphStyle(
+        "K9QuoteTableHeader",
+        parent=normal_style,
+        fontName="Helvetica-Bold",
+        textColor=colors.white,
+    )
+
+    table_header_right_style = ParagraphStyle(
+        "K9QuoteTableHeaderRight",
+        parent=table_header_style,
+        alignment=TA_RIGHT,
+    )
+
+    reference_label_style = ParagraphStyle(
+        "K9ReferenceLabel",
+        parent=normal_style,
+        fontName="Helvetica-Bold",
+        textColor=colors.white,
+    )
+
+    reference_value_style = ParagraphStyle(
+        "K9ReferenceValue",
+        parent=normal_style,
+        fontName="Helvetica-Bold",
+        textColor=colors.HexColor("#111111"),
+        alignment=TA_RIGHT,
+    )
+
+    story = []
+
+    # =====================================================
+    # K9 BRANDED PDF HEADER
+    #
+    # Find the logo through Django's static-file system so
+    # this works locally and after deployment/collectstatic.
+    # The project file is expected at:
+    # static/media/logo-I.png
+    # =====================================================
+
+    logo_path = finders.find(
+        "media/logo-I.png"
+    )
+
+    if logo_path:
+
+        logo = Image(
+            logo_path
+        )
+
+        max_logo_width = 48 * mm
+        max_logo_height = 30 * mm
+
+        scale = min(
+            max_logo_width / logo.drawWidth,
+            max_logo_height / logo.drawHeight,
+            1,
+        )
+
+        logo.drawWidth *= scale
+        logo.drawHeight *= scale
+
+        brand_element = logo
+
+    else:
+
+        # Safe fallback if the logo file cannot be found.
+        brand_element = Paragraph(
+            "K9",
+            title_style,
+        )
+
+    header_right = Paragraph(
+        (
+            "<b>QUOTATION</b><br/>"
+            f"Quote V{selected_quote.version}<br/>"
+            f"Order {escape(order.reference_number)}"
+        ),
+        right_style,
+    )
+
+    header_table = Table(
+        [
+            [
+                brand_element,
+                header_right,
+            ]
+        ],
+        colWidths=[
+            92 * mm,
+            71 * mm,
+        ],
+    )
+
+    header_table.setStyle(
+        TableStyle(
+            [
+                (
+                    "VALIGN",
+                    (0, 0),
+                    (-1, -1),
+                    "MIDDLE",
+                ),
+                (
+                    "ALIGN",
+                    (1, 0),
+                    (1, 0),
+                    "RIGHT",
+                ),
+                (
+                    "BOTTOMPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    8,
+                ),
+                (
+                    "LINEBELOW",
+                    (0, 0),
+                    (-1, -1),
+                    1,
+                    colors.HexColor("#212529"),
+                ),
+            ]
+        )
+    )
+
+    story.append(
+        header_table
+    )
+
+    story.append(
+        Spacer(
+            1,
+            4 * mm,
+        )
+    )
+
+    story.append(
+        Paragraph(
+            "Handmade, personalised &amp; bespoke gifts",
+            subtitle_style,
+        )
+    )
+
+    reference_data = [
+        [
+            Paragraph(
+                "<b>Quote</b>",
+                reference_label_style,
+            ),
+            Paragraph(
+                f"Quote V{selected_quote.version}",
+                reference_value_style,
+            ),
+        ],
+        [
+            Paragraph(
+                "<b>Order reference</b>",
+                reference_label_style,
+            ),
+            Paragraph(
+                escape(order.reference_number),
+                reference_value_style,
+            ),
+        ],
+        [
+            Paragraph(
+                "<b>Customer</b>",
+                reference_label_style,
+            ),
+            Paragraph(
+                escape(order.customer_name or ""),
+                reference_value_style,
+            ),
+        ],
+        [
+            Paragraph(
+                "<b>Email</b>",
+                reference_label_style,
+            ),
+            Paragraph(
+                escape(order.customer_email or ""),
+                reference_value_style,
+            ),
+        ],
+        [
+            Paragraph(
+                "<b>Document</b>",
+                reference_label_style,
+            ),
+            Paragraph(
+                "Quotation",
+                reference_value_style,
+            ),
+        ],
+        [
+            Paragraph(
+                "<b>Created</b>",
+                reference_label_style,
+            ),
+            Paragraph(
+                timezone.localtime(
+                    selected_quote.created_at
+                ).strftime(
+                    "%d %b %Y %H:%M"
+                ),
+                reference_value_style,
+            ),
+        ],
+    ]
+
+    reference_table = Table(
+        reference_data,
+        colWidths=[
+            55 * mm,
+            100 * mm,
+        ],
+    )
+
+    reference_table.setStyle(
+        TableStyle(
+            [
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (0, -1),
+                    colors.HexColor("#212529"),
+                ),
+                (
+                    "BACKGROUND",
+                    (1, 0),
+                    (1, -1),
+                    colors.white,
+                ),
+                (
+                    "BOX",
+                    (0, 0),
+                    (-1, -1),
+                    0.9,
+                    colors.HexColor("#adb5bd"),
+                ),
+                (
+                    "INNERGRID",
+                    (0, 0),
+                    (-1, -1),
+                    0.45,
+                    colors.HexColor("#ced4da"),
+                ),
+                (
+                    "VALIGN",
+                    (0, 0),
+                    (-1, -1),
+                    "TOP",
+                ),
+                (
+                    "LEFTPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    7,
+                ),
+                (
+                    "RIGHTPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    7,
+                ),
+                (
+                    "TOPPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    8,
+                ),
+                (
+                    "BOTTOMPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    8,
+                ),
+            ]
+        )
+    )
+
+    story.append(
+        reference_table
+    )
+
+    story.append(
+        Spacer(
+            1,
+            8 * mm,
+        )
+    )
+
+    story.append(
+        Paragraph(
+            escape(selected_quote.title),
+            heading_style,
+        )
+    )
+
+    line_data = [
+        [
+            Paragraph(
+                "Description",
+                table_header_style,
+            ),
+            Paragraph(
+                "Qty",
+                table_header_right_style,
+            ),
+            Paragraph(
+                "Unit",
+                table_header_right_style,
+            ),
+            Paragraph(
+                "Total",
+                table_header_right_style,
+            ),
+        ]
+    ]
+
+    for line in selected_quote.lines.all():
+
+        line_data.append(
+            [
+                Paragraph(
+                    escape(line.description),
+                    normal_style,
+                ),
+                Paragraph(
+                    f"{line.quantity:g}",
+                    right_style,
+                ),
+                Paragraph(
+                    f"£{line.unit_price:.2f}",
+                    right_style,
+                ),
+                Paragraph(
+                    f"£{line.line_total:.2f}",
+                    right_style,
+                ),
+            ]
+        )
+
+    line_table = Table(
+        line_data,
+        colWidths=[
+            92 * mm,
+            18 * mm,
+            25 * mm,
+            28 * mm,
+        ],
+        repeatRows=1,
+    )
+
+    line_table.setStyle(
+        TableStyle(
+            [
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    colors.HexColor("#212529"),
+                ),
+                (
+                    "TEXTCOLOR",
+                    (0, 0),
+                    (-1, 0),
+                    colors.white,
+                ),
+                (
+                    "BOX",
+                    (0, 0),
+                    (-1, -1),
+                    0.5,
+                    colors.HexColor("#ced4da"),
+                ),
+                (
+                    "INNERGRID",
+                    (0, 0),
+                    (-1, -1),
+                    0.25,
+                    colors.HexColor("#dee2e6"),
+                ),
+                (
+                    "VALIGN",
+                    (0, 0),
+                    (-1, -1),
+                    "TOP",
+                ),
+                (
+                    "LEFTPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    6,
+                ),
+                (
+                    "RIGHTPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    6,
+                ),
+                (
+                    "TOPPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    6,
+                ),
+                (
+                    "BOTTOMPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    6,
+                ),
+            ]
+        )
+    )
+
+    story.append(
+        line_table
+    )
+
+    story.append(
+        Spacer(
+            1,
+            6 * mm,
+        )
+    )
+
+    totals_data = [
+        [
+            "Subtotal",
+            f"£{selected_quote.subtotal:.2f}",
+        ],
+        [
+            "Delivery",
+            f"£{selected_quote.delivery_cost:.2f}",
+        ],
+    ]
+
+    if selected_quote.vat_enabled:
+
+        vat_label = (
+            f"VAT @ {selected_quote.vat_rate:g}%"
+        )
+
+        totals_data.append(
+            [
+                vat_label,
+                f"£{selected_quote.vat_amount:.2f}",
+            ]
+        )
+
+    else:
+
+        totals_data.append(
+            [
+                "VAT",
+                "Not applied",
+            ]
+        )
+
+    totals_data.append(
+        [
+            "TOTAL",
+            f"£{selected_quote.total:.2f}",
+        ]
+    )
+
+    totals_table = Table(
+        totals_data,
+        colWidths=[
+            55 * mm,
+            35 * mm,
+        ],
+        hAlign="RIGHT",
+    )
+
+    totals_table.setStyle(
+        TableStyle(
+            [
+                (
+                    "ALIGN",
+                    (1, 0),
+                    (1, -1),
+                    "RIGHT",
+                ),
+                (
+                    "FONTNAME",
+                    (0, -1),
+                    (-1, -1),
+                    "Helvetica-Bold",
+                ),
+                (
+                    "FONTSIZE",
+                    (0, -1),
+                    (-1, -1),
+                    11,
+                ),
+                (
+                    "LINEABOVE",
+                    (0, -1),
+                    (-1, -1),
+                    0.75,
+                    colors.HexColor("#212529"),
+                ),
+                (
+                    "TOPPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    5,
+                ),
+                (
+                    "BOTTOMPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    5,
+                ),
+            ]
+        )
+    )
+
+    story.append(
+        totals_table
+    )
+
+    if selected_quote.vat_enabled:
+
+        vat_delivery_text = (
+            "VAT includes delivery."
+            if selected_quote.vat_on_delivery
+            else "VAT excludes delivery."
+        )
+
+        story.append(
+            Spacer(
+                1,
+                3 * mm,
+            )
+        )
+
+        story.append(
+            Paragraph(
+                vat_delivery_text,
+                subtitle_style,
+            )
+        )
+
+    if selected_quote.notes:
+
+        story.append(
+            Spacer(
+                1,
+                5 * mm,
+            )
+        )
+
+        story.append(
+            Paragraph(
+                "Quote Notes",
+                heading_style,
+            )
+        )
+
+        safe_notes = (
+            escape(
+                selected_quote.notes
+            )
+            .replace(
+                "\n",
+                "<br/>"
+            )
+        )
+
+        story.append(
+            Paragraph(
+                safe_notes,
+                normal_style,
+            )
+        )
+
+    story.append(
+        Spacer(
+            1,
+            8 * mm,
+        )
+    )
+
+    story.append(
+        Paragraph(
+            (
+                "This quotation relates to K9 bespoke order "
+                f"{order.reference_number}. Final approval and "
+                "payment are handled separately."
+            ),
+            subtitle_style,
+        )
+    )
+
+    document.build(
+        story
+    )
+
+    return response
 
 
 # =========================================================
@@ -1447,6 +2528,31 @@ def bespoke_job_wizard(
         )
 
     # =====================================================
+    # QUOTE STATE
+    # =====================================================
+
+    active_quote = (
+        workflow.quotes
+        .filter(
+            status__in=[
+                BespokeQuote.Status.SENT,
+                BespokeQuote.Status.ACCEPTED,
+            ]
+        )
+        .order_by("-version")
+        .first()
+    )
+
+    accepted_quote = (
+        workflow.quotes
+        .filter(
+            status=BespokeQuote.Status.ACCEPTED
+        )
+        .order_by("-version")
+        .first()
+    )
+
+    # =====================================================
     # HARD DESIGN GATE
     #
     # No job can progress beyond Step 3 unless one design
@@ -1497,6 +2603,125 @@ def bespoke_job_wizard(
             ),
             step=3,
         )
+
+    # =====================================================
+    # HARD QUOTE ACCEPTANCE GATE
+    #
+    # Sending a quote does not unlock Step 5.
+    # The customer must accept the quote first. The public
+    # acceptance view advances the workflow automatically.
+    # =====================================================
+
+    if (
+        step > 4
+        and not is_closed
+        and not accepted_quote
+    ):
+
+        if workflow.current_step > 4:
+
+            workflow.current_step = (
+                BespokeOrderWorkflow
+                .Step
+                .QUOTE
+            )
+
+            workflow.stage = (
+                BespokeOrderWorkflow
+                .Stage
+                .QUOTE
+            )
+
+            workflow.save(
+                update_fields=[
+                    "current_step",
+                    "stage",
+                    "updated_at",
+                ]
+            )
+
+        messages.warning(
+            request,
+            (
+                "The customer must accept the quotation "
+                "before this job can progress to Approval "
+                "& Payment."
+            ),
+        )
+
+        return redirect(
+            "bespoke_job_wizard",
+            reference_number=(
+                order.reference_number
+            ),
+            step=4,
+        )
+
+    # =====================================================
+    # PAYMENT STATE / HARD PRODUCTION GATE
+    #
+    # Quote acceptance unlocks Step 5.
+    # Confirmed payment unlocks Step 6.
+    # =====================================================
+
+    approval_payment = (
+        BespokeApprovalPayment.objects
+        .select_related(
+            "quote"
+        )
+        .filter(
+            workflow=workflow
+        )
+        .first()
+    )
+
+    if (
+        step > 5
+        and not is_closed
+        and (
+            not approval_payment
+            or not approval_payment.can_start_production
+        )
+    ):
+
+        if workflow.current_step > 5:
+
+            workflow.current_step = (
+                BespokeOrderWorkflow
+                .Step
+                .APPROVAL
+            )
+
+            workflow.stage = (
+                BespokeOrderWorkflow
+                .Stage
+                .PAYMENT
+            )
+
+            workflow.save(
+                update_fields=[
+                    "current_step",
+                    "stage",
+                    "updated_at",
+                ]
+            )
+
+        messages.warning(
+            request,
+            (
+                "Confirmed payment is required before "
+                "this job can progress to Production."
+            ),
+        )
+
+        return redirect(
+            "bespoke_job_wizard",
+            reference_number=(
+                order.reference_number
+            ),
+            step=5,
+        )
+
 
     # =====================================================
     # STOP GENERAL FORWARD SKIPPING
@@ -1588,8 +2813,24 @@ def bespoke_job_wizard(
             )
         )
 
+        # -----------------------------------------------------
+        # PREPARE NEXT DESIGN VERSION
+        #
+        # Carry the previous design description forward.
+        # If the customer requested changes, automatically
+        # include those in the next revision form.
+        # -----------------------------------------------------
+
+        next_version_initial = (
+            build_next_design_version_initial(
+                design
+            )
+        )
+
         design_version_form = (
-            BespokeDesignVersionForm()
+            BespokeDesignVersionForm(
+                initial=next_version_initial
+            )
         )
 
         design_version_email_form = (
@@ -1613,6 +2854,52 @@ def bespoke_job_wizard(
                 }
             )
         )
+
+    # =====================================================
+    # STEP 4 FORMS
+    # =====================================================
+
+    quote_form = None
+    quote_line_formset = None
+    quote_editor = None
+
+    if step == 4:
+
+        quote_editor = (
+            workflow.quotes
+            .filter(
+                status=BespokeQuote.Status.DRAFT
+            )
+            .order_by("-version")
+            .first()
+        )
+
+        if quote_editor:
+
+            quote_form = (
+                BespokeQuoteForm(
+                    instance=quote_editor
+                )
+            )
+
+            quote_line_formset = (
+                BespokeQuoteLineFormSet(
+                    instance=quote_editor,
+                    prefix="quote_lines",
+                )
+            )
+
+        else:
+
+            quote_form = (
+                BespokeQuoteForm()
+            )
+
+            quote_line_formset = (
+                BespokeQuoteLineFormSet(
+                    prefix="quote_lines",
+                )
+            )
 
     # =====================================================
     # HANDLE POST
@@ -3050,6 +4337,654 @@ def bespoke_job_wizard(
                     )
 
         # =================================================
+        # STEP 4 - CREATE QUOTE
+        # =================================================
+
+        elif (
+            step == 4
+            and action == "create_quote"
+        ):
+
+            highest_version = (
+                workflow.quotes
+                .aggregate(maximum=Max("version"))
+                .get("maximum")
+                or 0
+            )
+
+            new_quote = BespokeQuote(
+                workflow=workflow,
+                version=highest_version + 1,
+                status=BespokeQuote.Status.DRAFT,
+                created_by=request.user,
+            )
+
+            quote_form = BespokeQuoteForm(
+                request.POST,
+                instance=new_quote,
+            )
+
+            quote_line_formset = (
+                BespokeQuoteLineFormSet(
+                    request.POST,
+                    instance=new_quote,
+                    prefix="quote_lines",
+                )
+            )
+
+            if (
+                quote_form.is_valid()
+                and quote_line_formset.is_valid()
+            ):
+
+                with transaction.atomic():
+
+                    new_quote = quote_form.save(
+                        commit=False
+                    )
+
+                    new_quote.workflow = workflow
+                    new_quote.version = (
+                        highest_version + 1
+                    )
+                    new_quote.status = (
+                        BespokeQuote.Status.DRAFT
+                    )
+                    new_quote.created_by = (
+                        request.user
+                    )
+                    new_quote.save()
+
+                    quote_line_formset.instance = (
+                        new_quote
+                    )
+                    quote_line_formset.save()
+
+                    new_quote.recalculate_totals()
+                    new_quote.refresh_from_db()
+
+                touch_workflow(
+                    workflow,
+                    request.user,
+                )
+
+                ensure_order_processing(
+                    order,
+                    request.user,
+                )
+
+                log_job_activity(
+                    order=order,
+                    user=request.user,
+                    message=(
+                        f"Quote V{new_quote.version} created "
+                        f"as a draft. Total: £{new_quote.total:.2f}."
+                    ),
+                )
+
+                messages.success(
+                    request,
+                    (
+                        f"Quote V{new_quote.version} "
+                        "created successfully."
+                    ),
+                )
+
+                return redirect(
+                    "bespoke_job_wizard",
+                    reference_number=(
+                        order.reference_number
+                    ),
+                    step=4,
+                )
+
+        # =================================================
+        # STEP 4 - SAVE DRAFT QUOTE
+        # =================================================
+
+        elif (
+            step == 4
+            and action == "save_quote"
+        ):
+
+            quote_id = request.POST.get(
+                "quote_id"
+            )
+
+            selected_quote = get_object_or_404(
+                BespokeQuote,
+                pk=quote_id,
+                workflow=workflow,
+            )
+
+            if (
+                selected_quote.status
+                != BespokeQuote.Status.DRAFT
+            ):
+
+                messages.warning(
+                    request,
+                    "Only draft quotations can be edited.",
+                )
+
+                return redirect(
+                    "bespoke_job_wizard",
+                    reference_number=(
+                        order.reference_number
+                    ),
+                    step=4,
+                )
+
+            quote_form = BespokeQuoteForm(
+                request.POST,
+                instance=selected_quote,
+            )
+
+            quote_line_formset = (
+                BespokeQuoteLineFormSet(
+                    request.POST,
+                    instance=selected_quote,
+                    prefix="quote_lines",
+                )
+            )
+
+            if (
+                quote_form.is_valid()
+                and quote_line_formset.is_valid()
+            ):
+
+                with transaction.atomic():
+
+                    selected_quote = (
+                        quote_form.save()
+                    )
+
+                    quote_line_formset.save()
+
+                    selected_quote.recalculate_totals()
+                    selected_quote.refresh_from_db()
+
+                touch_workflow(
+                    workflow,
+                    request.user,
+                )
+
+                log_job_activity(
+                    order=order,
+                    user=request.user,
+                    message=(
+                        f"Quote V{selected_quote.version} "
+                        f"draft updated. Total: "
+                        f"£{selected_quote.total:.2f}."
+                    ),
+                )
+
+                messages.success(
+                    request,
+                    (
+                        f"Quote V{selected_quote.version} "
+                        "saved."
+                    ),
+                )
+
+                return redirect(
+                    "bespoke_job_wizard",
+                    reference_number=(
+                        order.reference_number
+                    ),
+                    step=4,
+                )
+
+        # =================================================
+        # STEP 4 - CREATE REVISION
+        # =================================================
+
+        elif (
+            step == 4
+            and action == "create_quote_revision"
+        ):
+
+            quote_id = request.POST.get(
+                "quote_id"
+            )
+
+            source_quote = get_object_or_404(
+                BespokeQuote.objects.prefetch_related(
+                    "lines"
+                ),
+                pk=quote_id,
+                workflow=workflow,
+            )
+
+            existing_draft = (
+                workflow.quotes
+                .filter(
+                    status=BespokeQuote.Status.DRAFT
+                )
+                .exclude(pk=source_quote.pk)
+                .first()
+            )
+
+            if existing_draft:
+
+                messages.warning(
+                    request,
+                    (
+                        f"Quote V{existing_draft.version} is already "
+                        "an editable draft. Finish or send that "
+                        "revision before creating another."
+                    ),
+                )
+
+                return redirect(
+                    "bespoke_job_wizard",
+                    reference_number=(
+                        order.reference_number
+                    ),
+                    step=4,
+                )
+
+            new_quote = clone_quote_revision(
+                source_quote,
+                request.user,
+            )
+
+            touch_workflow(
+                workflow,
+                request.user,
+            )
+
+            log_job_activity(
+                order=order,
+                user=request.user,
+                message=(
+                    f"Quote V{new_quote.version} created from "
+                    f"Quote V{source_quote.version} for revision."
+                ),
+            )
+
+            messages.success(
+                request,
+                (
+                    f"Quote V{new_quote.version} created. "
+                    "You can now adjust the pricing."
+                ),
+            )
+
+            return redirect(
+                "bespoke_job_wizard",
+                reference_number=(
+                    order.reference_number
+                ),
+                step=4,
+            )
+
+        # =================================================
+        # STEP 4 - SEND QUOTE EMAIL
+        # =================================================
+
+        elif (
+            step == 4
+            and action == "send_quote_email"
+        ):
+
+            quote_id = request.POST.get(
+                "quote_id"
+            )
+
+            selected_quote = get_object_or_404(
+                BespokeQuote.objects.prefetch_related(
+                    "lines"
+                ),
+                pk=quote_id,
+                workflow=workflow,
+            )
+
+            if selected_quote.status not in {
+                BespokeQuote.Status.DRAFT,
+                BespokeQuote.Status.SENT,
+            }:
+
+                messages.warning(
+                    request,
+                    (
+                        "This quotation can no longer be "
+                        "sent to the customer."
+                    ),
+                )
+
+                return redirect(
+                    "bespoke_job_wizard",
+                    reference_number=(
+                        order.reference_number
+                    ),
+                    step=4,
+                )
+
+            selected_quote.recalculate_totals()
+            selected_quote.refresh_from_db()
+
+            if not selected_quote.lines.exists():
+
+                messages.error(
+                    request,
+                    (
+                        "Add at least one line item before "
+                        "sending this quotation."
+                    ),
+                )
+
+                return redirect(
+                    "bespoke_job_wizard",
+                    reference_number=(
+                        order.reference_number
+                    ),
+                    step=4,
+                )
+
+            subject = (
+                request.POST.get(
+                    "subject",
+                    "",
+                ).strip()
+                or (
+                    f"Quote V{selected_quote.version} | "
+                    f"K9 bespoke order {order.reference_number}"
+                )
+            )
+
+            staff_message = (
+                request.POST.get(
+                    "message",
+                    "",
+                ).strip()
+                or (
+                    f"Hi {customer_first_name(order)},\n\n"
+                    "We've prepared your bespoke quotation."
+                )
+            )
+
+            if (
+                order.reference_number.lower()
+                not in subject.lower()
+            ):
+
+                subject = (
+                    f"{order.reference_number} | {subject}"
+                )
+
+            email_message = format_quote_email_message(
+                order,
+                selected_quote,
+                staff_message,
+            )
+
+            approval_payment, _ = (
+                BespokeApprovalPayment.objects
+                .get_or_create(
+                    workflow=workflow
+                )
+            )
+
+            review_url = (
+                build_customer_quote_review_url(
+                    request,
+                    approval_payment,
+                )
+            )
+
+            from_email = settings.DEFAULT_FROM_EMAIL
+            now = timezone.now()
+
+            (
+                plain_content,
+                html_content,
+            ) = build_k9_email_content(
+                order=order,
+                staff_message=email_message,
+                section_title=(
+                    f"Quote V{selected_quote.version}"
+                ),
+                action_url=review_url,
+                action_label="Approve Quote & Pay",
+            )
+
+            pdf_filename = (
+                f"K9-{order.reference_number}-"
+                f"Quote-V{selected_quote.version}.pdf"
+            )
+
+            try:
+
+                pdf_response = bespoke_quote_pdf(
+                    request,
+                    selected_quote.pk,
+                )
+
+                if (
+                    pdf_response.status_code != 200
+                    or pdf_response.get(
+                        "Content-Type",
+                        ""
+                    ) != "application/pdf"
+                ):
+                    raise RuntimeError(
+                        "Quote PDF generation failed."
+                    )
+
+                message = EmailMultiAlternatives(
+                    subject=subject,
+                    body=plain_content,
+                    from_email=from_email,
+                    to=[order.customer_email],
+                )
+
+                message.attach_alternative(
+                    html_content,
+                    "text/html",
+                )
+
+                message.attach(
+                    pdf_filename,
+                    pdf_response.content,
+                    "application/pdf",
+                )
+
+                message.send(
+                    fail_silently=False
+                )
+
+            except Exception:
+
+                OrderCommunication.objects.create(
+                    order=order,
+                    channel=(
+                        OrderCommunication.Channel.EMAIL
+                    ),
+                    context=(
+                        OrderCommunication.Context.QUOTE
+                    ),
+                    direction=(
+                        OrderCommunication.Direction.OUTGOING
+                    ),
+                    status=(
+                        OrderCommunication.Status.FAILED
+                    ),
+                    subject=subject,
+                    from_address=from_email,
+                    to_address=order.customer_email,
+                    summary=(
+                        f"Quote V{selected_quote.version} "
+                        "email failed to send."
+                    ),
+                    content=email_message,
+                    has_attachment=True,
+                    attachment_names=[
+                        pdf_filename
+                    ],
+                    attachment_notes=(
+                        "The generated quote PDF was prepared "
+                        "for this email attempt."
+                    ),
+                    thread_reference=(
+                        f"quote:{selected_quote.pk}"
+                    ),
+                    logged_by=request.user,
+                    occurred_at=now,
+                )
+
+                log_job_activity(
+                    order=order,
+                    user=request.user,
+                    message=(
+                        f"Attempted to send Quote V"
+                        f"{selected_quote.version}, but the "
+                        "email failed."
+                    ),
+                )
+
+                messages.error(
+                    request,
+                    (
+                        "The quote email could not be sent. "
+                        "The failed attempt has been recorded."
+                    ),
+                )
+
+            else:
+
+                with transaction.atomic():
+
+                    supersede_other_active_quotes(
+                        selected_quote
+                    )
+
+                    selected_quote.status = (
+                        BespokeQuote.Status.SENT
+                    )
+                    selected_quote.sent_at = now
+                    selected_quote.save(
+                        update_fields=[
+                            "status",
+                            "sent_at",
+                            "updated_at",
+                        ]
+                    )
+
+                    approval_payment.mark_approval_requested(
+                        selected_quote
+                    )
+
+                    # A new/revised quote starts a fresh approval
+                    # cycle. Clear any stale approval/payment data
+                    # left from an earlier version.
+                    approval_payment.approved_name = ""
+                    approval_payment.approved_email = ""
+                    approval_payment.approval_notes = ""
+                    approval_payment.payment_provider = ""
+                    approval_payment.payment_reference = ""
+                    approval_payment.checkout_reference = ""
+                    approval_payment.payment_metadata = {}
+
+                    approval_payment.save(
+                        update_fields=[
+                            "approved_name",
+                            "approved_email",
+                            "approval_notes",
+                            "payment_provider",
+                            "payment_reference",
+                            "checkout_reference",
+                            "payment_metadata",
+                            "updated_at",
+                        ]
+                    )
+
+                    OrderCommunication.objects.create(
+                        order=order,
+                        channel=(
+                            OrderCommunication.Channel.EMAIL
+                        ),
+                        context=(
+                            OrderCommunication.Context.QUOTE
+                        ),
+                        direction=(
+                            OrderCommunication.Direction.OUTGOING
+                        ),
+                        status=(
+                            OrderCommunication.Status.SENT
+                        ),
+                        subject=subject,
+                        from_address=from_email,
+                        to_address=order.customer_email,
+                        summary=(
+                            f"Quote V{selected_quote.version} "
+                            f"sent to customer. Total: "
+                            f"£{selected_quote.total:.2f}."
+                        ),
+                        content=email_message,
+                        has_attachment=True,
+                        attachment_names=[
+                            pdf_filename
+                        ],
+                        attachment_notes=(
+                            "Generated Quote PDF attached to "
+                            "the customer email."
+                        ),
+                        thread_reference=(
+                            f"quote:{selected_quote.pk}"
+                        ),
+                        logged_by=request.user,
+                        occurred_at=now,
+                    )
+
+                    workflow.current_step = (
+                        BespokeOrderWorkflow.Step.QUOTE
+                    )
+                    workflow.stage = (
+                        BespokeOrderWorkflow.Stage.QUOTE
+                    )
+                    workflow.customer_waiting = True
+                    workflow.customer_waiting_since = now
+                    workflow.last_worked_by = request.user
+                    workflow.last_worked_at = now
+
+                    if workflow.started_at is None:
+                        workflow.started_at = now
+
+                    workflow.save()
+
+                ensure_order_processing(
+                    order,
+                    request.user,
+                )
+
+                log_job_activity(
+                    order=order,
+                    user=request.user,
+                    message=(
+                        f"Quote V{selected_quote.version} sent "
+                        f"to {order.customer_email}. Total: "
+                        f"£{selected_quote.total:.2f}."
+                    ),
+                )
+
+                messages.success(
+                    request,
+                    (
+                        f"Quote V{selected_quote.version} "
+                        "sent successfully."
+                    ),
+                )
+
+                return redirect(
+                    "bespoke_job_wizard",
+                    reference_number=(
+                        order.reference_number
+                    ),
+                    step=4,
+                )
+
+        # =================================================
         # STEP 8 - COMPLETE JOB
         # =================================================
 
@@ -3152,6 +5087,81 @@ def bespoke_job_wizard(
                             order.reference_number
                         ),
                         step=3,
+                    )
+
+            # ---------------------------------------------
+            # QUOTE ACCEPTANCE GATE
+            # ---------------------------------------------
+
+            if (
+                step == 4
+                and action == "save_continue"
+            ):
+
+                accepted_quote = (
+                    workflow.quotes
+                    .filter(
+                        status=BespokeQuote.Status.ACCEPTED
+                    )
+                    .order_by("-version")
+                    .first()
+                )
+
+                if not accepted_quote:
+
+                    messages.warning(
+                        request,
+                        (
+                            "The customer must accept the quotation "
+                            "before the workflow can continue to "
+                            "Approval & Payment."
+                        ),
+                    )
+
+                    return redirect(
+                        "bespoke_job_wizard",
+                        reference_number=(
+                            order.reference_number
+                        ),
+                        step=4,
+                    )
+
+            # ---------------------------------------------
+            # PAYMENT GATE
+            # ---------------------------------------------
+
+            if (
+                step == 5
+                and action == "save_continue"
+            ):
+
+                current_payment = (
+                    BespokeApprovalPayment.objects
+                    .filter(
+                        workflow=workflow
+                    )
+                    .first()
+                )
+
+                if (
+                    not current_payment
+                    or not current_payment.can_start_production
+                ):
+
+                    messages.warning(
+                        request,
+                        (
+                            "Confirmed payment is required "
+                            "before production can begin."
+                        ),
+                    )
+
+                    return redirect(
+                        "bespoke_job_wizard",
+                        reference_number=(
+                            order.reference_number
+                        ),
+                        step=5,
                     )
 
             old_values = {
@@ -3580,6 +5590,66 @@ def bespoke_job_wizard(
         )
 
     # =====================================================
+    # QUOTE DATA
+    # =====================================================
+
+    quotes = []
+    latest_quote = None
+    active_quote = None
+    accepted_quote = None
+    quote_communications = []
+
+    if step >= 4:
+
+        quotes = (
+            workflow.quotes
+            .select_related("created_by")
+            .prefetch_related("lines")
+            .order_by("-version")
+        )
+
+        latest_quote = (
+            workflow.quotes
+            .order_by("-version")
+            .first()
+        )
+
+        active_quote = (
+            workflow.quotes
+            .filter(
+                status__in=[
+                    BespokeQuote.Status.SENT,
+                    BespokeQuote.Status.ACCEPTED,
+                ]
+            )
+            .order_by("-version")
+            .first()
+        )
+
+        accepted_quote = (
+            workflow.quotes
+            .filter(
+                status=BespokeQuote.Status.ACCEPTED
+            )
+            .order_by("-version")
+            .first()
+        )
+
+        quote_communications = (
+            order.communications
+            .filter(
+                context=(
+                    OrderCommunication.Context.QUOTE
+                )
+            )
+            .select_related("logged_by")
+            .order_by(
+                "-occurred_at",
+                "-created_at",
+            )
+        )
+
+    # =====================================================
     # WIZARD NAVIGATION
     # =====================================================
 
@@ -3603,6 +5673,25 @@ def bespoke_job_wizard(
             number > 3
             and not is_closed
             and not accepted_design_version
+        ):
+
+            unlocked = False
+
+        if (
+            number > 4
+            and not is_closed
+            and not accepted_quote
+        ):
+
+            unlocked = False
+
+        if (
+            number > 5
+            and not is_closed
+            and (
+                not approval_payment
+                or not approval_payment.can_start_production
+            )
         ):
 
             unlocked = False
@@ -3764,6 +5853,46 @@ def bespoke_job_wizard(
 
         "design_communications": (
             design_communications
+        ),
+
+        # ---------------------------------------------
+        # STEP 4 - QUOTE SYSTEM
+        # ---------------------------------------------
+
+        "quote_form": (
+            quote_form
+        ),
+
+        "quote_line_formset": (
+            quote_line_formset
+        ),
+
+        "quote_editor": (
+            quote_editor
+        ),
+
+        "quotes": (
+            quotes
+        ),
+
+        "latest_quote": (
+            latest_quote
+        ),
+
+        "active_quote": (
+            active_quote
+        ),
+
+        "accepted_quote": (
+            accepted_quote
+        ),
+
+        "approval_payment": (
+            approval_payment
+        ),
+
+        "quote_communications": (
+            quote_communications
         ),
 
         # Legacy template compatibility.

@@ -1222,6 +1222,10 @@ class BespokeQuote(models.Model):
         blank=True,
     )
 
+    # =====================================================
+    # STAFF-ENTERED PRICING
+    # =====================================================
+
     subtotal = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -1234,11 +1238,60 @@ class BespokeQuote(models.Model):
         default=Decimal("0.00"),
     )
 
+    # =====================================================
+    # VAT
+    #
+    # Staff controls whether VAT applies and the rate.
+    # K9 only performs the calculation.
+    # =====================================================
+
+    vat_enabled = models.BooleanField(
+        default=False,
+        help_text=(
+            "Enable VAT calculation for this quote."
+        ),
+    )
+
+    vat_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("20.00"),
+        validators=[
+            MinValueValidator(
+                Decimal("0.00")
+            ),
+            MaxValueValidator(
+                Decimal("100.00")
+            ),
+        ],
+        help_text=(
+            "VAT percentage entered by staff."
+        ),
+    )
+
+    vat_on_delivery = models.BooleanField(
+        default=True,
+        help_text=(
+            "Include the delivery charge when calculating VAT."
+        ),
+    )
+
+    vat_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        editable=False,
+    )
+
     total = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=Decimal("0.00"),
     )
+
+    # =====================================================
+    # AUDIT
+    # =====================================================
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -1283,7 +1336,28 @@ class BespokeQuote(models.Model):
             ),
         ]
 
+    # =====================================================
+    # TOTAL CALCULATION
+    # =====================================================
+
     def recalculate_totals(self):
+        """
+        Recalculate the quotation from staff-entered prices.
+
+        Pricing is never generated automatically.
+
+        K9 calculates only:
+
+        line totals
+            ↓
+        subtotal
+            ↓
+        optional delivery
+            ↓
+        optional VAT
+            ↓
+        final total
+        """
 
         subtotal = sum(
             (
@@ -1294,29 +1368,81 @@ class BespokeQuote(models.Model):
             Decimal("0.00"),
         )
 
-        total = (
-            subtotal
-            + (
-                self.delivery_cost
+        delivery = (
+            self.delivery_cost
+            or Decimal("0.00")
+        )
+
+        vat_amount = Decimal("0.00")
+
+        if self.vat_enabled:
+
+            vat_rate = (
+                self.vat_rate
                 or Decimal("0.00")
             )
+
+            taxable_amount = subtotal
+
+            if self.vat_on_delivery:
+                taxable_amount += delivery
+
+            vat_amount = (
+                taxable_amount
+                * vat_rate
+                / Decimal("100.00")
+            ).quantize(
+                Decimal("0.01")
+            )
+
+        total = (
+            subtotal
+            + delivery
+            + vat_amount
         )
 
         self.subtotal = subtotal
+        self.vat_amount = vat_amount
         self.total = total
 
         type(self).objects.filter(
             pk=self.pk
         ).update(
             subtotal=subtotal,
+            vat_amount=vat_amount,
             total=total,
+        )
+
+    # =====================================================
+    # DISPLAY HELPERS
+    # =====================================================
+
+    @property
+    def before_vat_total(self):
+
+        return (
+            self.subtotal
+            + (
+                self.delivery_cost
+                or Decimal("0.00")
+            )
+        )
+
+    @property
+    def vat_label(self):
+
+        if not self.vat_enabled:
+            return "No VAT"
+
+        return (
+            f"VAT @ {self.vat_rate:g}%"
         )
 
     def __str__(self):
 
         return (
             f"{self.workflow.order.reference_number} "
-            f"| Quote v{self.version}"
+            f"| Quote V{self.version}"
         )
 
 

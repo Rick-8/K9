@@ -1,3 +1,4 @@
+from decimal import Decimal
 from pathlib import Path
 
 from django import forms
@@ -894,7 +895,11 @@ class BespokeQuoteForm(forms.ModelForm):
     """
     Main quotation information.
 
-    Quote version numbers and totals are controlled by K9.
+    All pricing and VAT decisions are entered by staff.
+    K9 only performs the calculations.
+
+    Quote version numbers and calculated totals are managed
+    by the system.
     """
 
     class Meta:
@@ -904,6 +909,9 @@ class BespokeQuoteForm(forms.ModelForm):
             "title",
             "notes",
             "delivery_cost",
+            "vat_enabled",
+            "vat_rate",
+            "vat_on_delivery",
         ]
 
         widgets = {
@@ -932,10 +940,32 @@ class BespokeQuoteForm(forms.ModelForm):
 
             "delivery_cost": forms.NumberInput(
                 attrs={
-                    "class": "form-control",
+                    "class": "form-control quote-delivery-cost",
                     "min": "0",
                     "step": "0.01",
                     "placeholder": "0.00",
+                }
+            ),
+
+            "vat_enabled": forms.CheckboxInput(
+                attrs={
+                    "class": "form-check-input quote-vat-enabled",
+                }
+            ),
+
+            "vat_rate": forms.NumberInput(
+                attrs={
+                    "class": "form-control quote-vat-rate",
+                    "min": "0",
+                    "max": "100",
+                    "step": "0.01",
+                    "placeholder": "20.00",
+                }
+            ),
+
+            "vat_on_delivery": forms.CheckboxInput(
+                attrs={
+                    "class": "form-check-input quote-vat-on-delivery",
                 }
             ),
         }
@@ -943,7 +973,10 @@ class BespokeQuoteForm(forms.ModelForm):
         labels = {
             "title": "Quote Title",
             "notes": "Customer Quote Notes",
-            "delivery_cost": "Delivery / Postage",
+            "delivery_cost": "Delivery / Postage (£)",
+            "vat_enabled": "Apply VAT",
+            "vat_rate": "VAT Rate (%)",
+            "vat_on_delivery": "Apply VAT to Delivery",
         }
 
         help_texts = {
@@ -952,8 +985,20 @@ class BespokeQuoteForm(forms.ModelForm):
                 "appear in the quote preview."
             ),
             "delivery_cost": (
-                "Enter 0.00 if delivery is included or "
-                "there is no delivery charge."
+                "Enter the delivery charge manually. "
+                "Use 0.00 if delivery is included or free."
+            ),
+            "vat_enabled": (
+                "Staff controls whether VAT applies to "
+                "this quote."
+            ),
+            "vat_rate": (
+                "Enter the VAT percentage to use for "
+                "this quote."
+            ),
+            "vat_on_delivery": (
+                "Include the delivery charge when "
+                "calculating VAT."
             ),
         }
 
@@ -966,7 +1011,7 @@ class BespokeQuoteForm(forms.ModelForm):
         )
 
         if value is None:
-            return 0
+            return Decimal("0.00")
 
         if value < 0:
             raise forms.ValidationError(
@@ -975,12 +1020,93 @@ class BespokeQuoteForm(forms.ModelForm):
 
         return value
 
+    def clean_vat_rate(self):
+
+        value = (
+            self.cleaned_data.get(
+                "vat_rate"
+            )
+        )
+
+        if value is None:
+            return Decimal("0.00")
+
+        if value < 0:
+            raise forms.ValidationError(
+                "VAT rate cannot be negative."
+            )
+
+        if value > 100:
+            raise forms.ValidationError(
+                "VAT rate cannot be more than 100%."
+            )
+
+        return value
+
+    def clean(self):
+
+        cleaned_data = super().clean()
+
+        vat_enabled = cleaned_data.get(
+            "vat_enabled"
+        )
+
+        vat_rate = cleaned_data.get(
+            "vat_rate"
+        )
+
+        if (
+            vat_enabled
+            and (
+                vat_rate is None
+                or vat_rate <= 0
+            )
+        ):
+            self.add_error(
+                "vat_rate",
+                (
+                    "Enter a VAT rate greater than 0 "
+                    "when VAT is enabled."
+                ),
+            )
+
+        return cleaned_data
+
+    def save(
+        self,
+        commit=True,
+    ):
+        """
+        Save staff-entered quote settings.
+
+        If saved immediately, refresh the calculated totals
+        using the model's VAT-aware calculation method.
+        """
+
+        quote = super().save(
+            commit=commit
+        )
+
+        if (
+            commit
+            and quote.pk
+        ):
+            quote.recalculate_totals()
+            quote.refresh_from_db()
+
+        return quote
+
 
 # =========================================================
 # STEP 4 - QUOTE LINE
 # =========================================================
 
 class BespokeQuoteLineForm(forms.ModelForm):
+    """
+    One staff-entered quotation line.
+
+    K9 never creates or suggests pricing here.
+    """
 
     class Meta:
         model = BespokeQuoteLine
@@ -1031,7 +1157,13 @@ class BespokeQuoteLineForm(forms.ModelForm):
         labels = {
             "description": "Description",
             "quantity": "Qty",
-            "unit_price": "Unit Price",
+            "unit_price": "Unit Price (£)",
+        }
+
+        help_texts = {
+            "unit_price": (
+                "Price entered manually by staff."
+            ),
         }
 
     def clean_quantity(self):
@@ -1060,10 +1192,10 @@ class BespokeQuoteLineForm(forms.ModelForm):
             )
         )
 
-        if (
-            unit_price is not None
-            and unit_price < 0
-        ):
+        if unit_price is None:
+            return Decimal("0.00")
+
+        if unit_price < 0:
             raise forms.ValidationError(
                 "Unit price cannot be negative."
             )
