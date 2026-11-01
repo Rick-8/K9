@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+Banner Control | K9
+{% endblock %}
+
+
+{% block content %}
+
+<div class="row justify-content-center">
+
+    <div class="col-12 col-xl-9">
+
+        <!-- =====================================================
+             PAGE HEADER
+        ====================================================== -->
+
+        <div class="
+            d-flex
+            flex-column
+            flex-md-row
+            justify-content-between
+            align-items-md-center
+            gap-3
+            mb-4
+        ">
+
+            <div>
+
+                <div class="
+                    text-uppercase
+                    text-muted
+                    small
+                    fw-semibold
+                    mb-1
+                ">
+                    Website Management
+                </div>
+
+                <h1 class="h2 fw-bold mb-1">
+
+                    <i class="bi bi-megaphone me-2"></i>
+
+                    Banner Control
+
+                </h1>
+
+                <p class="text-muted mb-0">
+                    Control the promotional banner shown
+                    across the K9 website.
+                </p>
+
+            </div>
+
+
+            <!-- CURRENT STATUS -->
+
+            <div>
+
+                {% if banner.enabled %}
+
+                    <span class="
+                        badge
+                        text-bg-success
+                        fs-6
+                        px-3
+                        py-2
+                    ">
+
+                        <i class="bi bi-check-circle me-1"></i>
+
+                        Banner Live
+
+                    </span>
+
+                {% else %}
+
+                    <span class="
+                        badge
+                        text-bg-secondary
+                        fs-6
+                        px-3
+                        py-2
+                    ">
+
+                        <i class="bi bi-eye-slash me-1"></i>
+
+                        Banner Hidden
+
+                    </span>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             MESSAGES
+        ====================================================== -->
+
+        {% if messages %}
+
+            {% for message in messages %}
+
+                <div class="
+                    alert
+                    alert-success
+                    alert-dismissible
+                    fade
+                    show
+                    shadow-sm
+                ">
+
+                    <i class="bi bi-check-circle-fill me-2"></i>
+
+                    {{ message }}
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="alert"
+                        aria-label="Close">
+                    </button>
+
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+
+        <!-- =====================================================
+             BANNER SETTINGS
+        ====================================================== -->
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="
+                card
+                border-0
+                shadow-sm
+                mb-4
+            ">
+
+                <div class="
+                    card-header
+                    bg-dark
+                    text-white
+                    py-3
+                ">
+
+                    <div class="
+                        d-flex
+                        align-items-center
+                        justify-content-between
+                    ">
+
+                        <div>
+
+                            <h2 class="h5 mb-1">
+                                Banner Settings
+                            </h2>
+
+                            <div class="small text-white-50">
+                                Changes apply across the entire website.
+                            </div>
+
+                        </div>
+
+                        <i class="
+                            bi
+                            bi-sliders
+                            fs-3
+                            text-warning
+                        "></i>
+
+                    </div>
+
+                </div>
+
+
+                <div class="card-body p-4">
+
+                    <!-- =============================================
+                         ENABLE / DISABLE
+                    ============================================== -->
+
+                    <div class="
+                        border
+                        rounded-3
+                        p-3
+                        mb-4
+                        bg-light
+                    ">
+
+                        <div class="
+                            d-flex
+                            justify-content-between
+                            align-items-center
+                            gap-3
+                        ">
+
+                            <div>
+
+                                <div class="fw-bold">
+                                    Show Website Banner
+                                </div>
+
+                                <div class="small text-muted">
+                                    Switch this off to completely
+                                    remove the banner from the website.
+                                </div>
+
+                            </div>
+
+
+                            <div class="form-check form-switch fs-4 m-0">
+
+                                {{ form.enabled }}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =============================================
+                         MESSAGE
+                    ============================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.text.id_for_label }}"
+                            class="form-label fw-semibold">
+
+                            Banner Message
+
+                        </label>
+
+                        {{ form.text }}
+
+                        {% if form.text.errors %}
+
+                            <div class="text-danger small mt-1">
+                                {{ form.text.errors }}
+                            </div>
+
+                        {% endif %}
+
+                        <div class="form-text">
+                            This is the main message customers will see.
+                        </div>
+
+                    </div>
+
+
+                    <!-- =============================================
+                         DISPLAY MODE
+                    ============================================== -->
+
+                    <div class="mb-4">
+
+                        <label
+                            for="{{ form.display_mode.id_for_label }}"
+                            class="form-label fw-semibold">
+
+                            Display Style
+
+                        </label>
+
+                        {{ form.display_mode }}
+
+                        <div class="form-text">
+                            Choose static, scrolling, flashing,
+                            or scrolling and flashing.
+                        </div>
+
+                    </div>
+
+
+                    <!-- =============================================
+                         OPTIONAL LINK
+                    ============================================== -->
+
+                    <div class="
+                        border-top
+                        pt-4
+                        mt-4
+                    ">
+
+                        <h3 class="h6 fw-bold mb-1">
+
+                            <i class="
+                                bi
+                                bi-link-45deg
+                                me-1
+                            "></i>
+
+                            Optional Banner Link
+
+                        </h3>
+
+                        <p class="small text-muted mb-3">
+                            You can make part of the banner clickable,
+                            for example to send customers to the shop
+                            or a special offer.
+                        </p>
+
+
+                        <div class="row g-3">
+
+
+                            <div class="col-md-5">
+
+                                <label
+                                    for="{{ form.link_text.id_for_label }}"
+                                    class="form-label fw-semibold">
+
+                                    Link Text
+
+                                </label>
+
+                                {{ form.link_text }}
+
+                            </div>
+
+
+                            <div class="col-md-7">
+
+                                <label
+                                    for="{{ form.link_url.id_for_label }}"
+                                    class="form-label fw-semibold">
+
+                                    Link Destination
+
+                                </label>
+
+                                {{ form.link_url }}
+
+                            </div>
+
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     SAVE
+                ================================================== -->
+
+                <div class="
+                    card-footer
+                    bg-white
+                    border-top
+                    p-3
+                ">
+
+                    <div class="
+                        d-flex
+                        flex-column
+                        flex-sm-row
+                        justify-content-between
+                        align-items-sm-center
+                        gap-3
+                    ">
+
+                        <div class="small text-muted">
+
+                            {% if banner.updated_at %}
+
+                                Last updated:
+
+                                {{ banner.updated_at|date:"d M Y H:i" }}
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <button
+                            type="submit"
+                            class="
+                                btn
+                                btn-dark
+                                px-4
+                            ">
+
+                            <i class="bi bi-save me-2"></i>
+
+                            Save Banner
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </form>
+
+
+        <!-- =====================================================
+             QUICK EXPLANATION
+        ====================================================== -->
+
+        <div class="
+            alert
+            alert-info
+            border-0
+            shadow-sm
+        ">
+
+            <div class="d-flex gap-3">
+
+                <i class="
+                    bi
+                    bi-info-circle-fill
+                    fs-4
+                "></i>
+
+                <div>
+
+                    <strong>Turning the banner off</strong>
+
+                    <div class="small mt-1">
+                        When disabled, the whole banner is removed.
+                        Customers will not see an empty strip or gap
+                        above the navigation bar.
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

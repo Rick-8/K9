@@ -263,26 +263,44 @@
 
     {% block promo_banner %}
 
-    <section class="promo-banner" data-banner-mode="{{ sale_banner_mode|default:'scroll' }}"
+    {% if site_banner and site_banner.enabled %}
+
+    <section class="promo-banner" data-banner-mode="{{ site_banner.display_mode }}"
         aria-label="Current promotion">
 
         <div class="promo-banner-inner">
 
             <div class="promo-banner-track">
 
+                <!-- =============================================
+                     PRIMARY MESSAGE
+                ============================================== -->
+
                 <span class="promo-banner-message">
 
                     <i class="bi bi-stars me-2"></i>
 
-                    {{ sale_banner_text|default:"Welcome to K9 — handmade gifts, personalised creations and completely
-                    bespoke designs." }}
+                    <span>
+                        {{ site_banner.text }}
+
+                        {% if site_banner.link_text and site_banner.link_url %}
+
+                        <a href="{{ site_banner.link_url }}" class="promo-banner-link ms-2">
+                            {{ site_banner.link_text }}
+                            <i class="bi bi-arrow-right-short ms-1"></i>
+                        </a>
+
+                        {% endif %}
+                    </span>
 
                     <i class="bi bi-stars ms-2"></i>
 
                 </span>
 
 
-                <!-- Duplicate for continuous scrolling -->
+                <!-- =============================================
+                     DUPLICATE FOR CONTINUOUS SCROLLING
+                ============================================== -->
 
                 <span class="
                             promo-banner-message
@@ -291,8 +309,18 @@
 
                     <i class="bi bi-stars me-2"></i>
 
-                    {{ sale_banner_text|default:"Welcome to K9 — handmade gifts, personalised creations and completely
-                    bespoke designs." }}
+                    <span>
+                        {{ site_banner.text }}
+
+                        {% if site_banner.link_text and site_banner.link_url %}
+
+                        <a href="{{ site_banner.link_url }}" class="promo-banner-link ms-2" tabindex="-1">
+                            {{ site_banner.link_text }}
+                            <i class="bi bi-arrow-right-short ms-1"></i>
+                        </a>
+
+                        {% endif %}
+                    </span>
 
                     <i class="bi bi-stars ms-2"></i>
 
@@ -303,6 +331,8 @@
         </div>
 
     </section>
+
+    {% endif %}
 
     {% endblock %}
 
@@ -446,7 +476,7 @@
                                         dropdown-toggle
                                         k9-management-link
 
-                                        {% if request.resolver_match.url_name == 'order_dashboard' or request.resolver_match.url_name == 'order_detail' or request.resolver_match.url_name == 'bespoke_jobs_dashboard' or request.resolver_match.url_name == 'staff_jobs_dashboard' or request.resolver_match.url_name == 'bespoke_job_wizard' %}
+                                        {% if request.resolver_match.url_name == 'order_dashboard' or request.resolver_match.url_name == 'order_detail' or request.resolver_match.url_name == 'bespoke_jobs_dashboard' or request.resolver_match.url_name == 'staff_jobs_dashboard' or request.resolver_match.url_name == 'bespoke_job_wizard' or request.resolver_match.url_name == 'banner_control' %}
                                             active
                                         {% endif %}
                                     " href="#" id="managementDropdown" role="button" data-bs-toggle="dropdown"
@@ -513,6 +543,25 @@
                                         <i class="bi bi-kanban me-2"></i>
 
                                         Bespoke Jobs
+
+                                    </a>
+
+                                </li>
+
+
+                                <li>
+
+                                    <a class="
+                                                    dropdown-item
+
+                                                    {% if request.resolver_match.url_name == 'banner_control' %}
+                                                        active
+                                                    {% endif %}
+                                                " href="{% url 'banner_control' %}">
+
+                                        <i class="bi bi-megaphone me-2"></i>
+
+                                        Banner Control
 
                                     </a>
 
@@ -995,6 +1044,35 @@
                                         text-white-50
                                     ">
                             Assign and manage bespoke work
+                        </div>
+
+                    </div>
+
+                </a>
+
+
+                <a href="{% url 'banner_control' %}" class="
+                                k9-mobile-link
+                                management
+
+                                {% if request.resolver_match.url_name == 'banner_control' %}
+                                    active
+                                {% endif %}
+                            ">
+
+                    <i class="bi bi-megaphone"></i>
+
+                    <div>
+
+                        <div class="fw-semibold">
+                            Banner Control
+                        </div>
+
+                        <div class="
+                                        small
+                                        text-white-50
+                                    ">
+                            Manage the website banner
                         </div>
 
                     </div>

@@ -82,6 +82,14 @@ urlpatterns = [
     ),
 
     path(
+        "staff/jobs/<str:reference_number>/",
+        staff_views.bespoke_job_detail,
+        name="bespoke_job_detail",
+    ),
+
+    # Legacy step URLs are kept temporarily so existing links
+    # and bookmarks continue to work safely.
+    path(
         "staff/jobs/<str:reference_number>/<int:step>/",
         staff_views.bespoke_job_wizard,
         name="bespoke_job_wizard",

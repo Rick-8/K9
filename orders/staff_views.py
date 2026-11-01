@@ -33,6 +33,8 @@ from .models import (
     BespokeOrderWorkflow,
     BespokeQuote,
     BespokeApprovalPayment,
+    BespokeProduction,
+    BespokeDelivery,
     OrderCommunication,
 )
 from .views import sync_bespoke_workflow_with_order
@@ -1396,11 +1398,10 @@ def log_workflow_field_changes(
         )
 
 
-
-
 # =========================================================
 # STEP 4 - QUOTE PDF
 # =========================================================
+
 
 @staff_member_required
 def bespoke_quote_pdf(
@@ -2426,39 +2427,74 @@ def staff_jobs_dashboard(request):
         context,
     )
 
-
 # =========================================================
-# BESPOKE JOB WIZARD
+# SINGLE-PAGE STAFF JOB WORKSPACE
 # =========================================================
 
-@staff_member_required
-def bespoke_job_wizard(
-    request,
-    reference_number,
-    step,
+
+def job_workspace_redirect(order, anchor=""):
+    """
+    Redirect back to the single-page staff job workspace.
+    """
+
+    from django.urls import reverse
+
+    url = reverse(
+        "bespoke_job_detail",
+        kwargs={
+            "reference_number": order.reference_number,
+        },
+    )
+
+    if anchor:
+        url = f"{url}#{anchor}"
+
+    return redirect(url)
+
+
+def record_workspace_event(
+    *,
+    order,
+    user,
+    context,
+    summary,
+    content="",
+    design_version=None,
 ):
     """
-    Persistent bespoke staff workflow.
+    Add an internal/system event to the permanent order
+    communication trail.
 
-    Ordinary staff may only open jobs assigned to them.
-    Superusers may open any bespoke job.
+    Design events can be tied to one exact design version.
     """
 
-    # =====================================================
-    # VALIDATE STEP
-    # =====================================================
+    return OrderCommunication.objects.create(
+        order=order,
+        design_version=design_version,
+        channel=OrderCommunication.Channel.OTHER,
+        context=context,
+        direction=OrderCommunication.Direction.OUTGOING,
+        status=OrderCommunication.Status.LOGGED,
+        from_address="K9",
+        to_address=order.customer_email or "",
+        summary=summary,
+        content=content,
+        logged_by=user,
+        occurred_at=timezone.now(),
+    )
 
-    if step not in WIZARD_STEPS:
 
-        if request.user.is_superuser:
+@staff_member_required
+def bespoke_job_detail(
+    request,
+    reference_number,
+):
+    """
+    Simple one-page bespoke staff workspace.
 
-            return redirect(
-                "bespoke_jobs_dashboard"
-            )
-
-        return redirect(
-            "staff_jobs_dashboard"
-        )
+    Ordinary staff can only access jobs assigned to them.
+    Superusers can access every bespoke job.
+    """
 
     # =====================================================
     # SECURE JOB QUERY
@@ -2475,397 +2511,90 @@ def bespoke_job_wizard(
     )
 
     if not request.user.is_superuser:
-
-        workflow_query = (
-            workflow_query.filter(
-                assigned_to=request.user
-            )
+        workflow_query = workflow_query.filter(
+            assigned_to=request.user
         )
 
     workflow = get_object_or_404(
         workflow_query,
-        order__reference_number=(
-            reference_number
-        ),
+        order__reference_number=reference_number,
     )
 
     order = workflow.order
+    bespoke = order.bespoke_request
 
     is_closed = (
-        workflow.stage
-        in CLOSED_STAGES
-    )
-
-    # =====================================================
-    # DESIGN MASTER RECORD
-    # =====================================================
-
-    design = (
-        BespokeDesign.objects
-        .filter(
-            workflow=workflow
-        )
-        .first()
-    )
-
-    if (
-        step >= 3
-        and not design
-    ):
-
-        design = (
-            BespokeDesign.objects.create(
-                workflow=workflow
-            )
-        )
-
-    accepted_design_version = None
-
-    if design:
-
-        accepted_design_version = (
-            design.accepted_version
-        )
-
-    # =====================================================
-    # QUOTE STATE
-    # =====================================================
-
-    active_quote = (
-        workflow.quotes
-        .filter(
-            status__in=[
-                BespokeQuote.Status.SENT,
-                BespokeQuote.Status.ACCEPTED,
-            ]
-        )
-        .order_by("-version")
-        .first()
-    )
-
-    accepted_quote = (
-        workflow.quotes
-        .filter(
-            status=BespokeQuote.Status.ACCEPTED
-        )
-        .order_by("-version")
-        .first()
-    )
-
-    # =====================================================
-    # HARD DESIGN GATE
-    #
-    # No job can progress beyond Step 3 unless one design
-    # revision has actually been accepted.
-    # =====================================================
-
-    if (
-        step > 3
-        and not is_closed
-        and not accepted_design_version
-    ):
-
-        if workflow.current_step > 3:
-
-            workflow.current_step = (
-                BespokeOrderWorkflow
-                .Step
-                .DESIGN
-            )
-
-            workflow.stage = (
-                BespokeOrderWorkflow
-                .Stage
-                .DESIGN
-            )
-
-            workflow.save(
-                update_fields=[
-                    "current_step",
-                    "stage",
-                    "updated_at",
-                ]
-            )
-
-        messages.warning(
-            request,
-            (
-                "A design must be accepted by the "
-                "customer before this job can progress "
-                "beyond Design & Specification."
-            ),
-        )
-
-        return redirect(
-            "bespoke_job_wizard",
-            reference_number=(
-                order.reference_number
-            ),
-            step=3,
-        )
-
-    # =====================================================
-    # HARD QUOTE ACCEPTANCE GATE
-    #
-    # Sending a quote does not unlock Step 5.
-    # The customer must accept the quote first. The public
-    # acceptance view advances the workflow automatically.
-    # =====================================================
-
-    if (
-        step > 4
-        and not is_closed
-        and not accepted_quote
-    ):
-
-        if workflow.current_step > 4:
-
-            workflow.current_step = (
-                BespokeOrderWorkflow
-                .Step
-                .QUOTE
-            )
-
-            workflow.stage = (
-                BespokeOrderWorkflow
-                .Stage
-                .QUOTE
-            )
-
-            workflow.save(
-                update_fields=[
-                    "current_step",
-                    "stage",
-                    "updated_at",
-                ]
-            )
-
-        messages.warning(
-            request,
-            (
-                "The customer must accept the quotation "
-                "before this job can progress to Approval "
-                "& Payment."
-            ),
-        )
-
-        return redirect(
-            "bespoke_job_wizard",
-            reference_number=(
-                order.reference_number
-            ),
-            step=4,
-        )
-
-    # =====================================================
-    # PAYMENT STATE / HARD PRODUCTION GATE
-    #
-    # Quote acceptance unlocks Step 5.
-    # Confirmed payment unlocks Step 6.
-    # =====================================================
-
-    approval_payment = (
-        BespokeApprovalPayment.objects
-        .select_related(
-            "quote"
-        )
-        .filter(
-            workflow=workflow
-        )
-        .first()
-    )
-
-    if (
-        step > 5
-        and not is_closed
-        and (
-            not approval_payment
-            or not approval_payment.can_start_production
-        )
-    ):
-
-        if workflow.current_step > 5:
-
-            workflow.current_step = (
-                BespokeOrderWorkflow
-                .Step
-                .APPROVAL
-            )
-
-            workflow.stage = (
-                BespokeOrderWorkflow
-                .Stage
-                .PAYMENT
-            )
-
-            workflow.save(
-                update_fields=[
-                    "current_step",
-                    "stage",
-                    "updated_at",
-                ]
-            )
-
-        messages.warning(
-            request,
-            (
-                "Confirmed payment is required before "
-                "this job can progress to Production."
-            ),
-        )
-
-        return redirect(
-            "bespoke_job_wizard",
-            reference_number=(
-                order.reference_number
-            ),
-            step=5,
-        )
-
-
-    # =====================================================
-    # STOP GENERAL FORWARD SKIPPING
-    # =====================================================
-
-    if (
-        step > workflow.current_step
-        and workflow.stage
-        not in CLOSED_STAGES
-    ):
-
-        return redirect(
-            "bespoke_job_wizard",
-            reference_number=(
-                order.reference_number
-            ),
-            step=workflow.current_step,
-        )
-
-    # =====================================================
-    # GENERIC FORMS
-    # =====================================================
-
-    workflow_form = (
-        BespokeJobWorkflowForm(
-            instance=workflow
-        )
-    )
-
-    email_form = CustomerEmailForm(
-        initial={
-            "subject": (
-                "Update on your K9 bespoke order "
-                f"{order.reference_number}"
-            ),
-
-            "message": (
-                default_customer_email_message(
-                    order
-                )
-            ),
+        workflow.stage in CLOSED_STAGES
+        or order.status in {
+            "sent",
+            "cancelled",
         }
     )
 
-    whatsapp_form = (
-        WhatsAppMessageForm(
-            initial={
-                "message": (
-                    default_whatsapp_message(
-                        order
-                    )
-                ),
-            }
+    # =====================================================
+    # CORE JOB RECORDS
+    # =====================================================
+
+    design, _ = (
+        BespokeDesign.objects
+        .get_or_create(
+            workflow=workflow
         )
     )
 
-    communication_log_form = (
-        CommunicationLogForm()
+    production, _ = (
+        BespokeProduction.objects
+        .get_or_create(
+            workflow=workflow
+        )
     )
 
-    whatsapp_url = ""
-
-    whatsapp_prepared_message = ""
+    delivery, _ = (
+        BespokeDelivery.objects
+        .get_or_create(
+            workflow=workflow
+        )
+    )
 
     # =====================================================
-    # STEP 3 FORMS
+    # STATE HELPERS
     # =====================================================
 
-    master_design_form = None
-
-    design_version_form = None
-
-    design_version_email_form = None
-
-    selected_design_version = None
-
-    # Legacy forms remain available temporarily until
-    # the template is replaced in the next step.
-
-    design_form = None
-
-    design_email_form = None
-
-    if step == 3:
-
-        master_design_form = (
-            BespokeDesignMasterForm(
-                instance=design
+    def get_approval_payment():
+        return (
+            BespokeApprovalPayment.objects
+            .select_related("quote")
+            .filter(
+                workflow=workflow
             )
+            .first()
         )
 
-        # -----------------------------------------------------
-        # PREPARE NEXT DESIGN VERSION
-        #
-        # Carry the previous design description forward.
-        # If the customer requested changes, automatically
-        # include those in the next revision form.
-        # -----------------------------------------------------
-
-        next_version_initial = (
-            build_next_design_version_initial(
-                design
+    def get_accepted_quote():
+        return (
+            workflow.quotes
+            .filter(
+                status=BespokeQuote.Status.ACCEPTED
             )
+            .order_by("-version")
+            .first()
         )
 
-        design_version_form = (
-            BespokeDesignVersionForm(
-                initial=next_version_initial
+    def get_active_quote():
+        return (
+            workflow.quotes
+            .filter(
+                status__in=[
+                    BespokeQuote.Status.SENT,
+                    BespokeQuote.Status.ACCEPTED,
+                ]
             )
+            .order_by("-version")
+            .first()
         )
 
-        design_version_email_form = (
-            DesignVersionEmailForm()
-        )
-
-        design_form = (
-            BespokeDesignForm(
-                instance=design
-            )
-        )
-
-        design_email_form = (
-            DesignCustomerEmailForm(
-                initial={
-                    "subject": (
-                        "Design update for your "
-                        "K9 bespoke order "
-                        f"{order.reference_number}"
-                    ),
-                }
-            )
-        )
-
-    # =====================================================
-    # STEP 4 FORMS
-    # =====================================================
-
-    quote_form = None
-    quote_line_formset = None
-    quote_editor = None
-
-    if step == 4:
-
-        quote_editor = (
+    def get_quote_editor():
+        return (
             workflow.quotes
             .filter(
                 status=BespokeQuote.Status.DRAFT
@@ -2874,46 +2603,103 @@ def bespoke_job_wizard(
             .first()
         )
 
-        if quote_editor:
+    # =====================================================
+    # DEFAULT FORMS
+    # =====================================================
 
-            quote_form = (
-                BespokeQuoteForm(
-                    instance=quote_editor
+    workflow_form = BespokeJobWorkflowForm(
+        instance=workflow
+    )
+
+    email_form = CustomerEmailForm(
+        initial={
+            "subject": (
+                "Update on your K9 bespoke order "
+                f"{order.reference_number}"
+            ),
+            "message": (
+                default_customer_email_message(
+                    order
+                )
+            ),
+        }
+    )
+
+    whatsapp_form = WhatsAppMessageForm(
+        initial={
+            "message": (
+                default_whatsapp_message(
+                    order
+                )
+            ),
+        }
+    )
+
+    communication_log_form = (
+        CommunicationLogForm()
+    )
+
+    master_design_form = (
+        BespokeDesignMasterForm(
+            instance=design
+        )
+    )
+
+    design_version_form = (
+        BespokeDesignVersionForm(
+            initial=(
+                build_next_design_version_initial(
+                    design
                 )
             )
+        )
+    )
 
-            quote_line_formset = (
-                BespokeQuoteLineFormSet(
-                    instance=quote_editor,
-                    prefix="quote_lines",
-                )
+    quote_editor = get_quote_editor()
+
+    if quote_editor:
+
+        quote_form = BespokeQuoteForm(
+            instance=quote_editor
+        )
+
+        quote_line_formset = (
+            BespokeQuoteLineFormSet(
+                instance=quote_editor,
+                prefix="quote_lines",
             )
+        )
 
-        else:
+    else:
 
-            quote_form = (
-                BespokeQuoteForm()
+        quote_form = BespokeQuoteForm()
+
+        quote_line_formset = (
+            BespokeQuoteLineFormSet(
+                prefix="quote_lines",
             )
+        )
 
-            quote_line_formset = (
-                BespokeQuoteLineFormSet(
-                    prefix="quote_lines",
-                )
-            )
+    whatsapp_url = ""
+    whatsapp_prepared_message = ""
 
     # =====================================================
-    # HANDLE POST
+    # HANDLE POST ACTIONS
     # =====================================================
 
     if request.method == "POST":
 
-        action = request.POST.get(
-            "action",
-            "save",
+        action = (
+            request.POST
+            .get(
+                "action",
+                "",
+            )
+            .strip()
         )
 
         # -------------------------------------------------
-        # CLOSED JOBS
+        # CLOSED JOB PROTECTION
         # -------------------------------------------------
 
         if is_closed:
@@ -2921,27 +2707,185 @@ def bespoke_job_wizard(
             messages.warning(
                 request,
                 (
-                    "This job is closed and "
-                    "can no longer be edited."
+                    "This job is closed and can "
+                    "no longer be edited."
                 ),
             )
 
-            return redirect(
-                "bespoke_job_wizard",
-                reference_number=(
-                    order.reference_number
-                ),
-                step=step,
+            return job_workspace_redirect(
+                order,
+                "job-top",
             )
 
         # =================================================
-        # STEP 2 - SEND EMAIL
+        # 1 - REVIEW
         # =================================================
 
-        if (
-            step == 2
-            and action == "send_email"
-        ):
+        if action == "mark_reviewed":
+
+            now = timezone.now()
+
+            with transaction.atomic():
+
+                workflow.stage = (
+                    BespokeOrderWorkflow
+                    .Stage
+                    .CUSTOMER_CONTACT
+                )
+
+                workflow.current_step = max(
+                    workflow.current_step,
+                    BespokeOrderWorkflow
+                    .Step
+                    .CONTACT,
+                )
+
+                workflow.last_worked_by = (
+                    request.user
+                )
+
+                workflow.last_worked_at = now
+
+                if workflow.started_at is None:
+                    workflow.started_at = now
+
+                workflow.save()
+
+                ensure_order_processing(
+                    order,
+                    request.user,
+                )
+
+                record_workspace_event(
+                    order=order,
+                    user=request.user,
+                    context=(
+                        OrderCommunication
+                        .Context
+                        .GENERAL
+                    ),
+                    summary=(
+                        "Initial job review completed."
+                    ),
+                    content=(
+                        "Staff reviewed the bespoke request "
+                        "and marked it ready for contact."
+                    ),
+                )
+
+                log_job_activity(
+                    order=order,
+                    user=request.user,
+                    message=(
+                        "Initial bespoke job review completed."
+                    ),
+                )
+
+            messages.success(
+                request,
+                "Review completed.",
+            )
+
+            return job_workspace_redirect(
+                order,
+                "contact",
+            )
+
+        # =================================================
+        # WORKING SUMMARY / PRIORITY
+        # =================================================
+
+        elif action == "save_workflow":
+
+            old_values = {
+                "priority": workflow.priority,
+                "staff_summary": (
+                    workflow.staff_summary
+                ),
+                "next_action": (
+                    workflow.next_action
+                ),
+                "next_action_due": (
+                    workflow.next_action_due
+                ),
+                "customer_waiting": (
+                    workflow.customer_waiting
+                ),
+            }
+
+            workflow_form = (
+                BespokeJobWorkflowForm(
+                    request.POST,
+                    instance=workflow,
+                )
+            )
+
+            if workflow_form.is_valid():
+
+                workflow = workflow_form.save(
+                    commit=False
+                )
+
+                now = timezone.now()
+
+                if (
+                    not old_values[
+                        "customer_waiting"
+                    ]
+                    and workflow.customer_waiting
+                ):
+                    workflow.customer_waiting_since = (
+                        now
+                    )
+
+                elif (
+                    old_values[
+                        "customer_waiting"
+                    ]
+                    and not workflow.customer_waiting
+                ):
+                    workflow.customer_waiting_since = (
+                        None
+                    )
+
+                workflow.last_worked_by = (
+                    request.user
+                )
+
+                workflow.last_worked_at = now
+
+                if workflow.started_at is None:
+                    workflow.started_at = now
+
+                workflow.save()
+
+                ensure_order_processing(
+                    order,
+                    request.user,
+                )
+
+                log_workflow_field_changes(
+                    order=order,
+                    user=request.user,
+                    old_values=old_values,
+                    workflow=workflow,
+                )
+
+                messages.success(
+                    request,
+                    "Job notes updated.",
+                )
+
+                return job_workspace_redirect(
+                    order,
+                    "review",
+                )
+
+        # =================================================
+        # 2 - SEND CUSTOMER EMAIL
+        # =================================================
+
+        elif action == "send_email":
 
             email_form = CustomerEmailForm(
                 request.POST,
@@ -2977,7 +2921,6 @@ def bespoke_job_wizard(
                 attachment_names = []
 
                 if attachment:
-
                     attachment_names.append(
                         attachment.name
                     )
@@ -2986,7 +2929,6 @@ def bespoke_job_wizard(
                     order.reference_number.lower()
                     not in subject.lower()
                 ):
-
                     subject = (
                         f"{order.reference_number} | "
                         f"{subject}"
@@ -3037,59 +2979,42 @@ def bespoke_job_wizard(
                 except Exception:
 
                     OrderCommunication.objects.create(
-
                         order=order,
-
                         channel=(
                             OrderCommunication
                             .Channel
                             .EMAIL
                         ),
-
                         context=(
                             OrderCommunication
                             .Context
                             .CONTACT
                         ),
-
                         direction=(
                             OrderCommunication
                             .Direction
                             .OUTGOING
                         ),
-
                         status=(
                             OrderCommunication
                             .Status
                             .FAILED
                         ),
-
                         subject=subject,
-
-                        from_address=(
-                            from_email
-                        ),
-
+                        from_address=from_email,
                         to_address=(
                             order.customer_email
                         ),
-
                         summary=(
                             "Email failed to send."
                         ),
-
-                        content=(
-                            email_message
-                        ),
-
+                        content=email_message,
                         has_attachment=bool(
                             attachment_names
                         ),
-
                         attachment_names=(
                             attachment_names
                         ),
-
                         attachment_notes=(
                             (
                                 "Attachment was selected "
@@ -3098,22 +3023,8 @@ def bespoke_job_wizard(
                             if attachment_names
                             else ""
                         ),
-
-                        logged_by=(
-                            request.user
-                        ),
-
+                        logged_by=request.user,
                         occurred_at=now,
-                    )
-
-                    log_job_activity(
-                        order=order,
-                        user=request.user,
-                        message=(
-                            "Attempted to email the customer "
-                            "from Customer Contact, but the "
-                            "email failed to send."
-                        ),
                     )
 
                     messages.error(
@@ -3128,57 +3039,40 @@ def bespoke_job_wizard(
                 else:
 
                     OrderCommunication.objects.create(
-
                         order=order,
-
                         channel=(
                             OrderCommunication
                             .Channel
                             .EMAIL
                         ),
-
                         context=(
                             OrderCommunication
                             .Context
                             .CONTACT
                         ),
-
                         direction=(
                             OrderCommunication
                             .Direction
                             .OUTGOING
                         ),
-
                         status=(
                             OrderCommunication
                             .Status
                             .SENT
                         ),
-
                         subject=subject,
-
-                        from_address=(
-                            from_email
-                        ),
-
+                        from_address=from_email,
                         to_address=(
                             order.customer_email
                         ),
-
                         summary=subject,
-
-                        content=(
-                            email_message
-                        ),
-
+                        content=email_message,
                         has_attachment=bool(
                             attachment_names
                         ),
-
                         attachment_names=(
                             attachment_names
                         ),
-
                         attachment_notes=(
                             (
                                 "Attachment sent with "
@@ -3187,11 +3081,7 @@ def bespoke_job_wizard(
                             if attachment_names
                             else ""
                         ),
-
-                        logged_by=(
-                            request.user
-                        ),
-
+                        logged_by=request.user,
                         occurred_at=now,
                     )
 
@@ -3209,8 +3099,7 @@ def bespoke_job_wizard(
                         order=order,
                         user=request.user,
                         message=(
-                            "Customer email sent from "
-                            "Customer Contact.\n"
+                            "Customer email sent.\n"
                             f"To: {order.customer_email}\n"
                             f"Subject: {subject}"
                         ),
@@ -3220,27 +3109,20 @@ def bespoke_job_wizard(
                         request,
                         (
                             "Email sent successfully and "
-                            "added to the job communications."
+                            "added to the communication trail."
                         ),
                     )
 
-                    return redirect(
-                        "bespoke_job_wizard",
-                        reference_number=(
-                            order.reference_number
-                        ),
-                        step=2,
-                    )
+                return job_workspace_redirect(
+                    order,
+                    "contact",
+                )
 
         # =================================================
-        # STEP 2 - PREPARE WHATSAPP
+        # 2 - PREPARE WHATSAPP
         # =================================================
 
-        elif (
-            step == 2
-            and action
-            == "prepare_whatsapp"
-        ):
+        elif action == "prepare_whatsapp":
 
             whatsapp_form = (
                 WhatsAppMessageForm(
@@ -3270,27 +3152,25 @@ def bespoke_job_wizard(
                     whatsapp_form.add_error(
                         None,
                         (
-                            "This customer does not have "
-                            "a valid telephone number "
-                            "available for WhatsApp."
+                            "This customer does not "
+                            "have a valid telephone "
+                            "number for WhatsApp."
                         ),
                     )
 
         # =================================================
-        # STEP 2 - CONFIRM WHATSAPP SENT
+        # 2 - CONFIRM WHATSAPP
         # =================================================
 
-        elif (
-            step == 2
-            and action
-            == "log_whatsapp_sent"
-        ):
+        elif action == "log_whatsapp_sent":
 
             whatsapp_message = (
-                request.POST.get(
+                request.POST
+                .get(
                     "whatsapp_message",
                     "",
-                ).strip()
+                )
+                .strip()
             )
 
             if not whatsapp_message:
@@ -3308,53 +3188,42 @@ def bespoke_job_wizard(
                 now = timezone.now()
 
                 OrderCommunication.objects.create(
-
                     order=order,
-
                     channel=(
                         OrderCommunication
                         .Channel
                         .WHATSAPP
                     ),
-
                     context=(
                         OrderCommunication
                         .Context
                         .CONTACT
                     ),
-
                     direction=(
                         OrderCommunication
                         .Direction
                         .OUTGOING
                     ),
-
                     status=(
                         OrderCommunication
                         .Status
                         .SENT
                     ),
-
                     from_address="K9",
-
                     to_address=(
                         order.phone_number
                         or ""
                     ),
-
                     summary=(
                         "WhatsApp message sent "
                         "to customer."
                     ),
-
                     content=(
                         whatsapp_message
                     ),
-
                     logged_by=(
                         request.user
                     ),
-
                     occurred_at=now,
                 )
 
@@ -3373,7 +3242,7 @@ def bespoke_job_wizard(
                     user=request.user,
                     message=(
                         "Outgoing WhatsApp message "
-                        "recorded from Customer Contact."
+                        "recorded."
                     ),
                 )
 
@@ -3381,27 +3250,20 @@ def bespoke_job_wizard(
                     request,
                     (
                         "WhatsApp message recorded "
-                        "in the job communications."
+                        "in the communication trail."
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=2,
+                return job_workspace_redirect(
+                    order,
+                    "contact",
                 )
 
         # =================================================
-        # STEP 2 - MANUAL CONTACT
+        # 2 - MANUAL COMMUNICATION
         # =================================================
 
-        elif (
-            step == 2
-            and action
-            == "log_communication"
-        ):
+        elif action == "log_communication":
 
             communication_log_form = (
                 CommunicationLogForm(
@@ -3488,37 +3350,26 @@ def bespoke_job_wizard(
 
                 communication = (
                     OrderCommunication.objects.create(
-
                         order=order,
-
                         channel=channel,
-
                         context=(
                             OrderCommunication
                             .Context
                             .CONTACT
                         ),
-
                         direction=direction,
-
                         status=status,
-
                         from_address=(
                             from_address
                         ),
-
                         to_address=(
                             to_address
                         ),
-
                         summary=summary,
-
                         content=content,
-
                         logged_by=(
                             request.user
                         ),
-
                         occurred_at=(
                             occurred_at
                         ),
@@ -3556,23 +3407,16 @@ def bespoke_job_wizard(
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=2,
+                return job_workspace_redirect(
+                    order,
+                    "contact",
                 )
 
         # =================================================
-        # STEP 3 - SAVE MASTER DESIGN BRIEF
+        # 3 - SAVE MASTER DESIGN BRIEF
         # =================================================
 
-        elif (
-            step == 3
-            and action
-            == "save_design_master"
-        ):
+        elif action == "save_design_master":
 
             master_design_form = (
                 BespokeDesignMasterForm(
@@ -3618,12 +3462,19 @@ def bespoke_job_wizard(
                     != design.specification
                 ):
 
-                    log_job_activity(
+                    record_workspace_event(
                         order=order,
                         user=request.user,
-                        message=(
-                            "Master design specification "
-                            "updated."
+                        context=(
+                            OrderCommunication
+                            .Context
+                            .DESIGN
+                        ),
+                        summary=(
+                            "Master design brief updated."
+                        ),
+                        content=(
+                            design.specification
                         ),
                     )
 
@@ -3636,35 +3487,26 @@ def bespoke_job_wizard(
                         order=order,
                         user=request.user,
                         message=(
-                            "Master internal design notes "
-                            "updated."
+                            "Master internal design "
+                            "notes updated."
                         ),
                     )
 
                 messages.success(
                     request,
-                    (
-                        "Master design brief saved."
-                    ),
+                    "Design brief saved.",
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=3,
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
                 )
 
         # =================================================
-        # STEP 3 - CREATE DESIGN VERSION
+        # 3 - CREATE DESIGN ATTEMPT
         # =================================================
 
-        elif (
-            step == 3
-            and action
-            == "create_design_version"
-        ):
+        elif action == "create_design_version":
 
             design_version_form = (
                 BespokeDesignVersionForm(
@@ -3726,6 +3568,36 @@ def bespoke_job_wizard(
 
                     new_version.save()
 
+                    event_content = (
+                        new_version
+                        .customer_summary
+                    )
+
+                    if new_version.change_summary:
+
+                        event_content += (
+                            "\n\nChanges in this version:\n"
+                            f"{new_version.change_summary}"
+                        )
+
+                    record_workspace_event(
+                        order=order,
+                        user=request.user,
+                        context=(
+                            OrderCommunication
+                            .Context
+                            .DESIGN
+                        ),
+                        summary=(
+                            f"{new_version.version_label} "
+                            "created."
+                        ),
+                        content=event_content,
+                        design_version=(
+                            new_version
+                        ),
+                    )
+
                 touch_workflow(
                     workflow,
                     request.user,
@@ -3735,6 +3607,21 @@ def bespoke_job_wizard(
                     order,
                     request.user,
                 )
+
+                workflow.stage = (
+                    BespokeOrderWorkflow
+                    .Stage
+                    .DESIGN
+                )
+
+                workflow.current_step = max(
+                    workflow.current_step,
+                    BespokeOrderWorkflow
+                    .Step
+                    .DESIGN,
+                )
+
+                workflow.save()
 
                 log_job_activity(
                     order=order,
@@ -3749,30 +3636,27 @@ def bespoke_job_wizard(
                     request,
                     (
                         f"{new_version.version_label} "
-                        "created successfully."
+                        "created and recorded in "
+                        "the communication trail."
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=3,
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
                 )
 
         # =================================================
-        # STEP 3 - SAVE EXISTING DRAFT VERSION
+        # 3 - SAVE DESIGN DRAFT
         # =================================================
 
-        elif (
-            step == 3
-            and action
-            == "save_design_version"
-        ):
+        elif action == "save_design_version":
 
-            version_id = request.POST.get(
-                "design_version_id"
+            version_id = (
+                request.POST
+                .get(
+                    "design_version_id"
+                )
             )
 
             selected_design_version = (
@@ -3795,17 +3679,14 @@ def bespoke_job_wizard(
                 messages.warning(
                     request,
                     (
-                        "Only draft design versions "
-                        "can be edited."
+                        "Only draft design "
+                        "versions can be edited."
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=3,
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
                 )
 
             design_version_form = (
@@ -3819,19 +3700,45 @@ def bespoke_job_wizard(
 
             if design_version_form.is_valid():
 
-                design_version_form.save()
+                selected_design_version = (
+                    design_version_form.save()
+                )
 
                 touch_workflow(
                     workflow,
                     request.user,
                 )
 
-                log_job_activity(
+                event_content = (
+                    selected_design_version
+                    .customer_summary
+                )
+
+                if (
+                    selected_design_version
+                    .change_summary
+                ):
+
+                    event_content += (
+                        "\n\nChanges in this version:\n"
+                        f"{selected_design_version.change_summary}"
+                    )
+
+                record_workspace_event(
                     order=order,
                     user=request.user,
-                    message=(
+                    context=(
+                        OrderCommunication
+                        .Context
+                        .DESIGN
+                    ),
+                    summary=(
                         f"{selected_design_version.version_label} "
                         "draft updated."
+                    ),
+                    content=event_content,
+                    design_version=(
+                        selected_design_version
                     ),
                 )
 
@@ -3843,26 +3750,22 @@ def bespoke_job_wizard(
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=3,
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
                 )
 
         # =================================================
-        # STEP 3 - SEND DESIGN VERSION EMAIL
+        # 3 - SEND DESIGN TO CUSTOMER
         # =================================================
 
-        elif (
-            step == 3
-            and action
-            == "send_design_version_email"
-        ):
+        elif action == "send_design_version_email":
 
-            version_id = request.POST.get(
-                "design_version_id"
+            version_id = (
+                request.POST
+                .get(
+                    "design_version_id"
+                )
             )
 
             selected_design_version = (
@@ -3896,12 +3799,9 @@ def bespoke_job_wizard(
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=3,
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
                 )
 
             design_version_email_form = (
@@ -3959,7 +3859,6 @@ def bespoke_job_wizard(
                 )
 
                 if attachment:
-
                     attachment_names.append(
                         attachment.name
                     )
@@ -3981,22 +3880,17 @@ def bespoke_job_wizard(
                     plain_content,
                     html_content,
                 ) = build_k9_email_content(
-
                     order=order,
-
                     staff_message=(
                         email_message
                     ),
-
                     section_title=(
                         selected_design_version
                         .version_label
                     ),
-
                     action_url=(
                         review_url
                     ),
-
                     action_label=(
                         "Review This Design"
                     ),
@@ -4032,64 +3926,50 @@ def bespoke_job_wizard(
                 except Exception:
 
                     OrderCommunication.objects.create(
-
                         order=order,
-
                         design_version=(
                             selected_design_version
                         ),
-
                         channel=(
                             OrderCommunication
                             .Channel
                             .EMAIL
                         ),
-
                         context=(
                             OrderCommunication
                             .Context
                             .DESIGN
                         ),
-
                         direction=(
                             OrderCommunication
                             .Direction
                             .OUTGOING
                         ),
-
                         status=(
                             OrderCommunication
                             .Status
                             .FAILED
                         ),
-
                         subject=subject,
-
                         from_address=(
                             from_email
                         ),
-
                         to_address=(
                             order.customer_email
                         ),
-
                         summary=(
                             f"{selected_design_version.version_label} "
                             "email failed to send."
                         ),
-
                         content=(
                             email_message
                         ),
-
                         has_attachment=bool(
                             attachment_names
                         ),
-
                         attachment_names=(
                             attachment_names
                         ),
-
                         attachment_notes=(
                             (
                                 "Design attachment was selected "
@@ -4098,30 +3978,18 @@ def bespoke_job_wizard(
                             if attachment_names
                             else ""
                         ),
-
                         logged_by=(
                             request.user
                         ),
-
                         occurred_at=now,
-                    )
-
-                    log_job_activity(
-                        order=order,
-                        user=request.user,
-                        message=(
-                            f"Attempted to send "
-                            f"{selected_design_version.version_label} "
-                            "to the customer, but the email failed."
-                        ),
                     )
 
                     messages.error(
                         request,
                         (
-                            "The design email could not be "
-                            "sent. The failed attempt has "
-                            "been recorded."
+                            "The design email could "
+                            "not be sent. The failed "
+                            "attempt was recorded."
                         ),
                     )
 
@@ -4176,64 +4044,50 @@ def bespoke_job_wizard(
                         selected_design_version.save()
 
                         OrderCommunication.objects.create(
-
                             order=order,
-
                             design_version=(
                                 selected_design_version
                             ),
-
                             channel=(
                                 OrderCommunication
                                 .Channel
                                 .EMAIL
                             ),
-
                             context=(
                                 OrderCommunication
                                 .Context
                                 .DESIGN
                             ),
-
                             direction=(
                                 OrderCommunication
                                 .Direction
                                 .OUTGOING
                             ),
-
                             status=(
                                 OrderCommunication
                                 .Status
                                 .SENT
                             ),
-
                             subject=subject,
-
                             from_address=(
                                 from_email
                             ),
-
                             to_address=(
                                 order.customer_email
                             ),
-
                             summary=(
                                 f"{selected_design_version.version_label} "
                                 "sent to customer for review."
                             ),
-
                             content=(
                                 email_message
                             ),
-
                             has_attachment=bool(
                                 attachment_names
                             ),
-
                             attachment_names=(
                                 attachment_names
                             ),
-
                             attachment_notes=(
                                 (
                                     "Design attachment sent "
@@ -4242,11 +4096,9 @@ def bespoke_job_wizard(
                                 if attachment_names
                                 else ""
                             ),
-
                             logged_by=(
                                 request.user
                             ),
-
                             occurred_at=now,
                         )
 
@@ -4254,6 +4106,13 @@ def bespoke_job_wizard(
                             BespokeOrderWorkflow
                             .Stage
                             .DESIGN
+                        )
+
+                        workflow.current_step = max(
+                            workflow.current_step,
+                            BespokeOrderWorkflow
+                            .Step
+                            .DESIGN,
                         )
 
                         workflow.customer_waiting = (
@@ -4285,38 +4144,12 @@ def bespoke_job_wizard(
                         request.user,
                     )
 
-                    attachment_text = ""
-
-                    if attachment_names:
-
-                        attachment_text = (
-                            "\nAttachment: "
-                            + ", ".join(
-                                attachment_names
-                            )
-                        )
-
-                    fingerprint_text = ""
-
-                    if (
-                        selected_design_version
-                        .file_sha256
-                    ):
-
-                        fingerprint_text = (
-                            "\nFile fingerprint: "
-                            f"{selected_design_version.file_sha256}"
-                        )
-
                     log_job_activity(
                         order=order,
                         user=request.user,
                         message=(
                             f"{selected_design_version.version_label} "
-                            "sent to the customer for review.\n"
-                            f"To: {order.customer_email}"
-                            f"{attachment_text}"
-                            f"{fingerprint_text}"
+                            "sent to customer for review."
                         ),
                     )
 
@@ -4324,155 +4157,109 @@ def bespoke_job_wizard(
                         request,
                         (
                             f"{selected_design_version.version_label} "
-                            "sent to the customer for review."
+                            "sent for customer review."
                         ),
                     )
 
-                    return redirect(
-                        "bespoke_job_wizard",
-                        reference_number=(
-                            order.reference_number
-                        ),
-                        step=3,
-                    )
-
-        # =================================================
-        # STEP 4 - CREATE QUOTE
-        # =================================================
-
-        elif (
-            step == 4
-            and action == "create_quote"
-        ):
-
-            highest_version = (
-                workflow.quotes
-                .aggregate(maximum=Max("version"))
-                .get("maximum")
-                or 0
-            )
-
-            new_quote = BespokeQuote(
-                workflow=workflow,
-                version=highest_version + 1,
-                status=BespokeQuote.Status.DRAFT,
-                created_by=request.user,
-            )
-
-            quote_form = BespokeQuoteForm(
-                request.POST,
-                instance=new_quote,
-            )
-
-            quote_line_formset = (
-                BespokeQuoteLineFormSet(
-                    request.POST,
-                    instance=new_quote,
-                    prefix="quote_lines",
-                )
-            )
-
-            if (
-                quote_form.is_valid()
-                and quote_line_formset.is_valid()
-            ):
-
-                with transaction.atomic():
-
-                    new_quote = quote_form.save(
-                        commit=False
-                    )
-
-                    new_quote.workflow = workflow
-                    new_quote.version = (
-                        highest_version + 1
-                    )
-                    new_quote.status = (
-                        BespokeQuote.Status.DRAFT
-                    )
-                    new_quote.created_by = (
-                        request.user
-                    )
-                    new_quote.save()
-
-                    quote_line_formset.instance = (
-                        new_quote
-                    )
-                    quote_line_formset.save()
-
-                    new_quote.recalculate_totals()
-                    new_quote.refresh_from_db()
-
-                touch_workflow(
-                    workflow,
-                    request.user,
-                )
-
-                ensure_order_processing(
+                return job_workspace_redirect(
                     order,
-                    request.user,
-                )
-
-                log_job_activity(
-                    order=order,
-                    user=request.user,
-                    message=(
-                        f"Quote V{new_quote.version} created "
-                        f"as a draft. Total: £{new_quote.total:.2f}."
-                    ),
-                )
-
-                messages.success(
-                    request,
-                    (
-                        f"Quote V{new_quote.version} "
-                        "created successfully."
-                    ),
-                )
-
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=4,
+                    "design-quote",
                 )
 
         # =================================================
-        # STEP 4 - SAVE DRAFT QUOTE
+        # 3 - CREATE OR SAVE QUOTE
         # =================================================
 
-        elif (
-            step == 4
-            and action == "save_quote"
-        ):
+        elif action in {
+            "create_quote",
+            "save_quote",
+        }:
 
-            quote_id = request.POST.get(
-                "quote_id"
+            accepted_design_version = (
+                design.accepted_version
             )
 
-            selected_quote = get_object_or_404(
-                BespokeQuote,
-                pk=quote_id,
-                workflow=workflow,
-            )
-
-            if (
-                selected_quote.status
-                != BespokeQuote.Status.DRAFT
-            ):
+            if not accepted_design_version:
 
                 messages.warning(
                     request,
-                    "Only draft quotations can be edited.",
+                    (
+                        "A design must be accepted "
+                        "before a quote can be prepared."
+                    ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=4,
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
+                )
+
+            if action == "save_quote":
+
+                quote_id = (
+                    request.POST
+                    .get(
+                        "quote_id"
+                    )
+                )
+
+                selected_quote = (
+                    get_object_or_404(
+                        BespokeQuote,
+                        pk=quote_id,
+                        workflow=workflow,
+                    )
+                )
+
+                if (
+                    selected_quote.status
+                    != BespokeQuote.Status.DRAFT
+                ):
+
+                    messages.warning(
+                        request,
+                        (
+                            "Only draft quotations "
+                            "can be edited."
+                        ),
+                    )
+
+                    return job_workspace_redirect(
+                        order,
+                        "design-quote",
+                    )
+
+            else:
+
+                highest_version = (
+                    workflow.quotes
+                    .aggregate(
+                        maximum=Max(
+                            "version"
+                        )
+                    )
+                    .get(
+                        "maximum"
+                    )
+                    or 0
+                )
+
+                selected_quote = (
+                    BespokeQuote(
+                        workflow=workflow,
+                        version=(
+                            highest_version
+                            + 1
+                        ),
+                        status=(
+                            BespokeQuote
+                            .Status
+                            .DRAFT
+                        ),
+                        created_by=(
+                            request.user
+                        ),
+                    )
                 )
 
             quote_form = BespokeQuoteForm(
@@ -4496,12 +4283,31 @@ def bespoke_job_wizard(
                 with transaction.atomic():
 
                     selected_quote = (
-                        quote_form.save()
+                        quote_form.save(
+                            commit=False
+                        )
+                    )
+
+                    selected_quote.workflow = (
+                        workflow
+                    )
+
+                    if not selected_quote.pk:
+
+                        selected_quote.created_by = (
+                            request.user
+                        )
+
+                    selected_quote.save()
+
+                    quote_line_formset.instance = (
+                        selected_quote
                     )
 
                     quote_line_formset.save()
 
                     selected_quote.recalculate_totals()
+
                     selected_quote.refresh_from_db()
 
                 touch_workflow(
@@ -4509,12 +4315,40 @@ def bespoke_job_wizard(
                     request.user,
                 )
 
+                ensure_order_processing(
+                    order,
+                    request.user,
+                )
+
+                record_workspace_event(
+                    order=order,
+                    user=request.user,
+                    context=(
+                        OrderCommunication
+                        .Context
+                        .QUOTE
+                    ),
+                    summary=(
+                        f"Quote V{selected_quote.version} "
+                        + (
+                            "created."
+                            if action
+                            == "create_quote"
+                            else "updated."
+                        )
+                    ),
+                    content=(
+                        "Quote total: "
+                        f"£{selected_quote.total:.2f}"
+                    ),
+                )
+
                 log_job_activity(
                     order=order,
                     user=request.user,
                     message=(
                         f"Quote V{selected_quote.version} "
-                        f"draft updated. Total: "
+                        f"saved. Total: "
                         f"£{selected_quote.total:.2f}."
                     ),
                 )
@@ -4527,29 +4361,27 @@ def bespoke_job_wizard(
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=4,
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
                 )
 
         # =================================================
-        # STEP 4 - CREATE REVISION
+        # 3 - CREATE QUOTE REVISION
         # =================================================
 
-        elif (
-            step == 4
-            and action == "create_quote_revision"
-        ):
+        elif action == "create_quote_revision":
 
-            quote_id = request.POST.get(
-                "quote_id"
+            quote_id = (
+                request.POST
+                .get(
+                    "quote_id"
+                )
             )
 
             source_quote = get_object_or_404(
-                BespokeQuote.objects.prefetch_related(
+                BespokeQuote.objects
+                .prefetch_related(
                     "lines"
                 ),
                 pk=quote_id,
@@ -4559,9 +4391,15 @@ def bespoke_job_wizard(
             existing_draft = (
                 workflow.quotes
                 .filter(
-                    status=BespokeQuote.Status.DRAFT
+                    status=(
+                        BespokeQuote
+                        .Status
+                        .DRAFT
+                    )
                 )
-                .exclude(pk=source_quote.pk)
+                .exclude(
+                    pk=source_quote.pk
+                )
                 .first()
             )
 
@@ -4570,18 +4408,14 @@ def bespoke_job_wizard(
                 messages.warning(
                     request,
                     (
-                        f"Quote V{existing_draft.version} is already "
-                        "an editable draft. Finish or send that "
-                        "revision before creating another."
+                        f"Quote V{existing_draft.version} "
+                        "is already an editable draft."
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=4,
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
                 )
 
             new_quote = clone_quote_revision(
@@ -4594,50 +4428,75 @@ def bespoke_job_wizard(
                 request.user,
             )
 
-            log_job_activity(
+            record_workspace_event(
                 order=order,
                 user=request.user,
-                message=(
-                    f"Quote V{new_quote.version} created from "
-                    f"Quote V{source_quote.version} for revision."
+                context=(
+                    OrderCommunication
+                    .Context
+                    .QUOTE
+                ),
+                summary=(
+                    f"Quote V{new_quote.version} "
+                    f"created from Quote "
+                    f"V{source_quote.version}."
                 ),
             )
 
             messages.success(
                 request,
                 (
-                    f"Quote V{new_quote.version} created. "
-                    "You can now adjust the pricing."
+                    f"Quote V{new_quote.version} "
+                    "created."
                 ),
             )
 
-            return redirect(
-                "bespoke_job_wizard",
-                reference_number=(
-                    order.reference_number
-                ),
-                step=4,
+            return job_workspace_redirect(
+                order,
+                "design-quote",
             )
 
         # =================================================
-        # STEP 4 - SEND QUOTE EMAIL
+        # 3 - SEND QUOTE
         # =================================================
 
-        elif (
-            step == 4
-            and action == "send_quote_email"
-        ):
+        elif action == "send_quote_email":
 
-            quote_id = request.POST.get(
-                "quote_id"
+            accepted_design_version = (
+                design.accepted_version
             )
 
-            selected_quote = get_object_or_404(
-                BespokeQuote.objects.prefetch_related(
-                    "lines"
-                ),
-                pk=quote_id,
-                workflow=workflow,
+            if not accepted_design_version:
+
+                messages.warning(
+                    request,
+                    (
+                        "A design must be accepted "
+                        "before the quote can be sent."
+                    ),
+                )
+
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
+                )
+
+            quote_id = (
+                request.POST
+                .get(
+                    "quote_id"
+                )
+            )
+
+            selected_quote = (
+                get_object_or_404(
+                    BespokeQuote.objects
+                    .prefetch_related(
+                        "lines"
+                    ),
+                    pk=quote_id,
+                    workflow=workflow,
+                )
             )
 
             if selected_quote.status not in {
@@ -4648,17 +4507,14 @@ def bespoke_job_wizard(
                 messages.warning(
                     request,
                     (
-                        "This quotation can no longer be "
-                        "sent to the customer."
+                        "This quotation can no "
+                        "longer be sent."
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=4,
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
                 )
 
             selected_quote.recalculate_totals()
@@ -4669,35 +4525,37 @@ def bespoke_job_wizard(
                 messages.error(
                     request,
                     (
-                        "Add at least one line item before "
-                        "sending this quotation."
+                        "Add at least one line item "
+                        "before sending the quote."
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=4,
+                return job_workspace_redirect(
+                    order,
+                    "design-quote",
                 )
 
             subject = (
-                request.POST.get(
+                request.POST
+                .get(
                     "subject",
                     "",
-                ).strip()
+                )
+                .strip()
                 or (
                     f"Quote V{selected_quote.version} | "
-                    f"K9 bespoke order {order.reference_number}"
+                    f"K9 bespoke order "
+                    f"{order.reference_number}"
                 )
             )
 
             staff_message = (
-                request.POST.get(
+                request.POST
+                .get(
                     "message",
                     "",
-                ).strip()
+                )
+                .strip()
                 or (
                     f"Hi {customer_first_name(order)},\n\n"
                     "We've prepared your bespoke quotation."
@@ -4710,13 +4568,16 @@ def bespoke_job_wizard(
             ):
 
                 subject = (
-                    f"{order.reference_number} | {subject}"
+                    f"{order.reference_number} | "
+                    f"{subject}"
                 )
 
-            email_message = format_quote_email_message(
-                order,
-                selected_quote,
-                staff_message,
+            email_message = (
+                format_quote_email_message(
+                    order,
+                    selected_quote,
+                    staff_message,
+                )
             )
 
             approval_payment, _ = (
@@ -4733,7 +4594,10 @@ def bespoke_job_wizard(
                 )
             )
 
-            from_email = settings.DEFAULT_FROM_EMAIL
+            from_email = (
+                settings.DEFAULT_FROM_EMAIL
+            )
+
             now = timezone.now()
 
             (
@@ -4746,7 +4610,9 @@ def bespoke_job_wizard(
                     f"Quote V{selected_quote.version}"
                 ),
                 action_url=review_url,
-                action_label="Approve Quote & Pay",
+                action_label=(
+                    "Approve Quote & Pay"
+                ),
             )
 
             pdf_filename = (
@@ -4762,12 +4628,15 @@ def bespoke_job_wizard(
                 )
 
                 if (
-                    pdf_response.status_code != 200
+                    pdf_response.status_code
+                    != 200
                     or pdf_response.get(
                         "Content-Type",
-                        ""
-                    ) != "application/pdf"
+                        "",
+                    )
+                    != "application/pdf"
                 ):
+
                     raise RuntimeError(
                         "Quote PDF generation failed."
                     )
@@ -4776,7 +4645,9 @@ def bespoke_job_wizard(
                     subject=subject,
                     body=plain_content,
                     from_email=from_email,
-                    to=[order.customer_email],
+                    to=[
+                        order.customer_email
+                    ],
                 )
 
                 message.attach_alternative(
@@ -4799,20 +4670,30 @@ def bespoke_job_wizard(
                 OrderCommunication.objects.create(
                     order=order,
                     channel=(
-                        OrderCommunication.Channel.EMAIL
+                        OrderCommunication
+                        .Channel
+                        .EMAIL
                     ),
                     context=(
-                        OrderCommunication.Context.QUOTE
+                        OrderCommunication
+                        .Context
+                        .QUOTE
                     ),
                     direction=(
-                        OrderCommunication.Direction.OUTGOING
+                        OrderCommunication
+                        .Direction
+                        .OUTGOING
                     ),
                     status=(
-                        OrderCommunication.Status.FAILED
+                        OrderCommunication
+                        .Status
+                        .FAILED
                     ),
                     subject=subject,
                     from_address=from_email,
-                    to_address=order.customer_email,
+                    to_address=(
+                        order.customer_email
+                    ),
                     summary=(
                         f"Quote V{selected_quote.version} "
                         "email failed to send."
@@ -4823,8 +4704,9 @@ def bespoke_job_wizard(
                         pdf_filename
                     ],
                     attachment_notes=(
-                        "The generated quote PDF was prepared "
-                        "for this email attempt."
+                        "The generated quote PDF "
+                        "was prepared for this "
+                        "email attempt."
                     ),
                     thread_reference=(
                         f"quote:{selected_quote.pk}"
@@ -4837,17 +4719,18 @@ def bespoke_job_wizard(
                     order=order,
                     user=request.user,
                     message=(
-                        f"Attempted to send Quote V"
-                        f"{selected_quote.version}, but the "
-                        "email failed."
+                        f"Attempted to send Quote "
+                        f"V{selected_quote.version}, "
+                        "but the email failed."
                     ),
                 )
 
                 messages.error(
                     request,
                     (
-                        "The quote email could not be sent. "
-                        "The failed attempt has been recorded."
+                        "The quote email could not "
+                        "be sent. The failed attempt "
+                        "has been recorded."
                     ),
                 )
 
@@ -4860,9 +4743,13 @@ def bespoke_job_wizard(
                     )
 
                     selected_quote.status = (
-                        BespokeQuote.Status.SENT
+                        BespokeQuote
+                        .Status
+                        .SENT
                     )
+
                     selected_quote.sent_at = now
+
                     selected_quote.save(
                         update_fields=[
                             "status",
@@ -4875,9 +4762,6 @@ def bespoke_job_wizard(
                         selected_quote
                     )
 
-                    # A new/revised quote starts a fresh approval
-                    # cycle. Clear any stale approval/payment data
-                    # left from an earlier version.
                     approval_payment.approved_name = ""
                     approval_payment.approved_email = ""
                     approval_payment.approval_notes = ""
@@ -4886,36 +4770,35 @@ def bespoke_job_wizard(
                     approval_payment.checkout_reference = ""
                     approval_payment.payment_metadata = {}
 
-                    approval_payment.save(
-                        update_fields=[
-                            "approved_name",
-                            "approved_email",
-                            "approval_notes",
-                            "payment_provider",
-                            "payment_reference",
-                            "checkout_reference",
-                            "payment_metadata",
-                            "updated_at",
-                        ]
-                    )
+                    approval_payment.save()
 
                     OrderCommunication.objects.create(
                         order=order,
                         channel=(
-                            OrderCommunication.Channel.EMAIL
+                            OrderCommunication
+                            .Channel
+                            .EMAIL
                         ),
                         context=(
-                            OrderCommunication.Context.QUOTE
+                            OrderCommunication
+                            .Context
+                            .QUOTE
                         ),
                         direction=(
-                            OrderCommunication.Direction.OUTGOING
+                            OrderCommunication
+                            .Direction
+                            .OUTGOING
                         ),
                         status=(
-                            OrderCommunication.Status.SENT
+                            OrderCommunication
+                            .Status
+                            .SENT
                         ),
                         subject=subject,
                         from_address=from_email,
-                        to_address=order.customer_email,
+                        to_address=(
+                            order.customer_email
+                        ),
                         summary=(
                             f"Quote V{selected_quote.version} "
                             f"sent to customer. Total: "
@@ -4927,8 +4810,8 @@ def bespoke_job_wizard(
                             pdf_filename
                         ],
                         attachment_notes=(
-                            "Generated Quote PDF attached to "
-                            "the customer email."
+                            "Generated Quote PDF "
+                            "attached to customer email."
                         ),
                         thread_reference=(
                             f"quote:{selected_quote.pk}"
@@ -4937,15 +4820,29 @@ def bespoke_job_wizard(
                         occurred_at=now,
                     )
 
-                    workflow.current_step = (
-                        BespokeOrderWorkflow.Step.QUOTE
+                    workflow.current_step = max(
+                        workflow.current_step,
+                        BespokeOrderWorkflow
+                        .Step
+                        .QUOTE,
                     )
+
                     workflow.stage = (
-                        BespokeOrderWorkflow.Stage.QUOTE
+                        BespokeOrderWorkflow
+                        .Stage
+                        .QUOTE
                     )
+
                     workflow.customer_waiting = True
-                    workflow.customer_waiting_since = now
-                    workflow.last_worked_by = request.user
+
+                    workflow.customer_waiting_since = (
+                        now
+                    )
+
+                    workflow.last_worked_by = (
+                        request.user
+                    )
+
                     workflow.last_worked_at = now
 
                     if workflow.started_at is None:
@@ -4962,9 +4859,9 @@ def bespoke_job_wizard(
                     order=order,
                     user=request.user,
                     message=(
-                        f"Quote V{selected_quote.version} sent "
-                        f"to {order.customer_email}. Total: "
-                        f"£{selected_quote.total:.2f}."
+                        f"Quote V{selected_quote.version} "
+                        f"sent to {order.customer_email}. "
+                        f"Total: £{selected_quote.total:.2f}."
                     ),
                 )
 
@@ -4976,60 +4873,276 @@ def bespoke_job_wizard(
                     ),
                 )
 
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
+            return job_workspace_redirect(
+                order,
+                "design-quote",
+            )
+
+        # =================================================
+        # 5 - PRODUCT MADE
+        # =================================================
+
+        elif action == "mark_product_made":
+
+            current_payment = (
+                get_approval_payment()
+            )
+
+            if (
+                not current_payment
+                or not current_payment
+                .can_start_production
+            ):
+
+                messages.warning(
+                    request,
+                    (
+                        "The accepted quote must "
+                        "be paid before the product "
+                        "can be marked as made."
                     ),
-                    step=4,
                 )
 
-        # =================================================
-        # STEP 8 - COMPLETE JOB
-        # =================================================
+                return job_workspace_redirect(
+                    order,
+                    "production",
+                )
 
-        elif (
-            action == "complete_job"
-            and step == 8
-        ):
+            now = timezone.now()
 
             with transaction.atomic():
 
-                workflow.current_step = 8
+                production.status = (
+                    BespokeProduction
+                    .Status
+                    .COMPLETE
+                )
+
+                if production.started_at is None:
+                    production.started_at = now
+
+                production.completed_at = now
+
+                production.updated_by = (
+                    request.user
+                )
+
+                production.save()
+
+                workflow.stage = (
+                    BespokeOrderWorkflow
+                    .Stage
+                    .READY
+                )
+
+                workflow.current_step = max(
+                    workflow.current_step,
+                    BespokeOrderWorkflow
+                    .Step
+                    .DELIVERY,
+                )
 
                 workflow.last_worked_by = (
                     request.user
                 )
 
-                workflow.last_worked_at = (
-                    timezone.now()
-                )
+                workflow.last_worked_at = now
 
                 workflow.save()
 
-                order.status = "sent"
-
-                order.save()
-
-                sync_bespoke_workflow_with_order(
-                    order,
-                    request.user,
+                record_workspace_event(
+                    order=order,
+                    user=request.user,
+                    context=(
+                        OrderCommunication
+                        .Context
+                        .PRODUCTION
+                    ),
+                    summary=(
+                        "Product marked as made."
+                    ),
+                    content=(
+                        "Completed by "
+                        f"{format_user_name(request.user)} "
+                        f"on {format_datetime(now)}."
+                    ),
                 )
 
                 log_job_activity(
                     order=order,
                     user=request.user,
                     message=(
-                        "Bespoke job closed through "
-                        "the staff workflow wizard."
+                        "Product marked as made."
+                    ),
+                )
+
+            messages.success(
+                request,
+                "Product marked as made.",
+            )
+
+            return job_workspace_redirect(
+                order,
+                "dispatch",
+            )
+
+        # =================================================
+        # 6 - DISPATCH / FINISH
+        # =================================================
+
+        elif action == "complete_dispatch":
+
+            if (
+                production.status
+                != (
+                    BespokeProduction
+                    .Status
+                    .COMPLETE
+                )
+            ):
+
+                messages.warning(
+                    request,
+                    (
+                        "Mark the product as made "
+                        "before completing dispatch."
+                    ),
+                )
+
+                return job_workspace_redirect(
+                    order,
+                    "production",
+                )
+
+            skip_tracking = (
+                request.POST.get(
+                    "skip_tracking"
+                )
+                == "1"
+            )
+
+            tracking_number = (
+                request.POST
+                .get(
+                    "tracking_number",
+                    "",
+                )
+                .strip()
+            )
+
+            if skip_tracking:
+                tracking_number = ""
+
+            now = timezone.now()
+
+            with transaction.atomic():
+
+                delivery.status = (
+                    BespokeDelivery
+                    .Status
+                    .DISPATCHED
+                )
+
+                delivery.tracking_number = (
+                    tracking_number
+                )
+
+                delivery.dispatched_at = now
+
+                delivery.dispatched_by = (
+                    request.user
+                )
+
+                delivery.updated_by = (
+                    request.user
+                )
+
+                delivery.save()
+
+                order.tracking_number = (
+                    tracking_number
+                    or None
+                )
+
+                order.status = "sent"
+
+                order.save()
+
+                workflow.stage = (
+                    BespokeOrderWorkflow
+                    .Stage
+                    .COMPLETED
+                )
+
+                workflow.current_step = (
+                    BespokeOrderWorkflow
+                    .Step
+                    .CLOSE
+                )
+
+                workflow.completed_at = now
+
+                workflow.customer_waiting = False
+
+                workflow.customer_waiting_since = (
+                    None
+                )
+
+                workflow.last_worked_by = (
+                    request.user
+                )
+
+                workflow.last_worked_at = now
+
+                workflow.save()
+
+                record_workspace_event(
+                    order=order,
+                    user=request.user,
+                    context=(
+                        OrderCommunication
+                        .Context
+                        .DELIVERY
+                    ),
+                    summary=(
+                        "Product dispatched and "
+                        "job completed."
+                    ),
+                    content=(
+                        (
+                            "Tracking number: "
+                            f"{tracking_number}"
+                        )
+                        if tracking_number
+                        else (
+                            "Job completed without "
+                            "a tracking number."
+                        )
+                    ),
+                )
+
+                log_job_activity(
+                    order=order,
+                    user=request.user,
+                    message=(
+                        "Product dispatched and "
+                        "bespoke job completed."
                     ),
                 )
 
             messages.success(
                 request,
                 (
-                    f"{order.reference_number} "
-                    "has been completed."
+                    "Product sent and job completed"
+                    + (
+                        f" with tracking "
+                        f"{tracking_number}."
+                        if tracking_number
+                        else (
+                            " without a tracking "
+                            "number."
+                        )
+                    )
                 ),
             )
 
@@ -5043,705 +5156,102 @@ def bespoke_job_wizard(
                 "staff_jobs_dashboard"
             )
 
-        # =================================================
-        # NORMAL WORKFLOW SAVE
-        # =================================================
-
-        elif action in {
-            "save",
-            "save_exit",
-            "save_continue",
-        }:
-
-            # ---------------------------------------------
-            # DESIGN GATE
-            # ---------------------------------------------
-
-            if (
-                step == 3
-                and action
-                == "save_continue"
-            ):
-
-                accepted_design_version = (
-                    design.accepted_version
-                    if design
-                    else None
-                )
-
-                if not accepted_design_version:
-
-                    messages.warning(
-                        request,
-                        (
-                            "The customer must accept a "
-                            "design version before this "
-                            "job can continue to Pricing "
-                            "& Quote."
-                        ),
-                    )
-
-                    return redirect(
-                        "bespoke_job_wizard",
-                        reference_number=(
-                            order.reference_number
-                        ),
-                        step=3,
-                    )
-
-            # ---------------------------------------------
-            # QUOTE ACCEPTANCE GATE
-            # ---------------------------------------------
-
-            if (
-                step == 4
-                and action == "save_continue"
-            ):
-
-                accepted_quote = (
-                    workflow.quotes
-                    .filter(
-                        status=BespokeQuote.Status.ACCEPTED
-                    )
-                    .order_by("-version")
-                    .first()
-                )
-
-                if not accepted_quote:
-
-                    messages.warning(
-                        request,
-                        (
-                            "The customer must accept the quotation "
-                            "before the workflow can continue to "
-                            "Approval & Payment."
-                        ),
-                    )
-
-                    return redirect(
-                        "bespoke_job_wizard",
-                        reference_number=(
-                            order.reference_number
-                        ),
-                        step=4,
-                    )
-
-            # ---------------------------------------------
-            # PAYMENT GATE
-            # ---------------------------------------------
-
-            if (
-                step == 5
-                and action == "save_continue"
-            ):
-
-                current_payment = (
-                    BespokeApprovalPayment.objects
-                    .filter(
-                        workflow=workflow
-                    )
-                    .first()
-                )
-
-                if (
-                    not current_payment
-                    or not current_payment.can_start_production
-                ):
-
-                    messages.warning(
-                        request,
-                        (
-                            "Confirmed payment is required "
-                            "before production can begin."
-                        ),
-                    )
-
-                    return redirect(
-                        "bespoke_job_wizard",
-                        reference_number=(
-                            order.reference_number
-                        ),
-                        step=5,
-                    )
-
-            old_values = {
-
-                "priority": (
-                    workflow.priority
-                ),
-
-                "staff_summary": (
-                    workflow.staff_summary
-                ),
-
-                "next_action": (
-                    workflow.next_action
-                ),
-
-                "next_action_due": (
-                    workflow.next_action_due
-                ),
-
-                "customer_waiting": (
-                    workflow.customer_waiting
-                ),
-
-                "current_step": (
-                    workflow.current_step
-                ),
-
-                "stage": (
-                    workflow.stage
-                ),
-            }
-
-            workflow_form = (
-                BespokeJobWorkflowForm(
-                    request.POST,
-                    instance=workflow,
-                )
-            )
-
-            if workflow_form.is_valid():
-
-                with transaction.atomic():
-
-                    workflow = (
-                        workflow_form.save(
-                            commit=False
-                        )
-                    )
-
-                    now = timezone.now()
-
-                    # -------------------------------------
-                    # CUSTOMER WAITING
-                    # -------------------------------------
-
-                    if (
-                        not old_values[
-                            "customer_waiting"
-                        ]
-                        and workflow
-                        .customer_waiting
-                    ):
-
-                        workflow.customer_waiting_since = (
-                            now
-                        )
-
-                    elif (
-                        old_values[
-                            "customer_waiting"
-                        ]
-                        and not workflow
-                        .customer_waiting
-                    ):
-
-                        workflow.customer_waiting_since = (
-                            None
-                        )
-
-                    # -------------------------------------
-                    # STAFF ACTIVITY
-                    # -------------------------------------
-
-                    if workflow.started_at is None:
-
-                        workflow.started_at = now
-
-                        log_job_activity(
-                            order=order,
-                            user=request.user,
-                            message=(
-                                "Bespoke job started "
-                                "in the workflow wizard."
-                            ),
-                        )
-
-                    workflow.last_worked_by = (
-                        request.user
-                    )
-
-                    workflow.last_worked_at = (
-                        now
-                    )
-
-                    # -------------------------------------
-                    # ORDER STATUS
-                    # -------------------------------------
-
-                    if order.status == "pending":
-
-                        order.status = (
-                            "processing"
-                        )
-
-                        order.save()
-
-                        log_job_activity(
-                            order=order,
-                            user=request.user,
-                            message=(
-                                "Order status changed "
-                                "from 'Pending' to "
-                                "'Processing' when staff "
-                                "started work."
-                            ),
-                        )
-
-                    # -------------------------------------
-                    # PROGRESS
-                    # -------------------------------------
-
-                    progress_step = max(
-                        old_values[
-                            "current_step"
-                        ],
-                        step,
-                    )
-
-                    if (
-                        action
-                        == "save_continue"
-                        and step < 8
-                    ):
-
-                        progress_step = max(
-                            progress_step,
-                            step + 1,
-                        )
-
-                    workflow.current_step = (
-                        progress_step
-                    )
-
-                    # -------------------------------------
-                    # STAGE
-                    # -------------------------------------
-
-                    if (
-                        progress_step
-                        > old_values[
-                            "current_step"
-                        ]
-                        or old_values[
-                            "stage"
-                        ]
-                        == (
-                            BespokeOrderWorkflow
-                            .Stage
-                            .NEW
-                        )
-                    ):
-
-                        workflow.stage = (
-                            STEP_STAGE_MAP[
-                                progress_step
-                            ]
-                        )
-
-                    workflow.save()
-
-                    log_workflow_field_changes(
-                        order=order,
-                        user=request.user,
-                        old_values=(
-                            old_values
-                        ),
-                        workflow=workflow,
-                    )
-
-                    # -------------------------------------
-                    # STAGE LOG
-                    # -------------------------------------
-
-                    if (
-                        old_values["stage"]
-                        != workflow.stage
-                    ):
-
-                        old_stage_name = dict(
-                            BespokeOrderWorkflow
-                            .Stage
-                            .choices
-                        ).get(
-                            old_values[
-                                "stage"
-                            ],
-                            old_values[
-                                "stage"
-                            ],
-                        )
-
-                        log_job_activity(
-                            order=order,
-                            user=request.user,
-                            message=(
-                                "Workflow stage changed "
-                                f"from '{old_stage_name}' "
-                                "to "
-                                f"'{workflow.get_stage_display()}'."
-                            ),
-                        )
-
-                    # -------------------------------------
-                    # STEP LOG
-                    # -------------------------------------
-
-                    if (
-                        old_values[
-                            "current_step"
-                        ]
-                        != workflow.current_step
-                    ):
-
-                        next_step_data = (
-                            WIZARD_STEPS[
-                                workflow.current_step
-                            ]
-                        )
-
-                        log_job_activity(
-                            order=order,
-                            user=request.user,
-                            message=(
-                                "Workflow moved to "
-                                f"Step "
-                                f"{workflow.current_step}: "
-                                f"{next_step_data['title']}."
-                            ),
-                        )
-
-                # =========================================
-                # SAVE & EXIT
-                # =========================================
-
-                if action == "save_exit":
-
-                    messages.success(
-                        request,
-                        (
-                            "Job saved. You can resume "
-                            "from this point later."
-                        ),
-                    )
-
-                    if request.user.is_superuser:
-
-                        return redirect(
-                            "bespoke_jobs_dashboard"
-                        )
-
-                    return redirect(
-                        "staff_jobs_dashboard"
-                    )
-
-                # =========================================
-                # SAVE & CONTINUE
-                # =========================================
-
-                if (
-                    action
-                    == "save_continue"
-                    and step < 8
-                ):
-
-                    messages.success(
-                        request,
-                        "Progress saved.",
-                    )
-
-                    return redirect(
-                        "bespoke_job_wizard",
-                        reference_number=(
-                            order.reference_number
-                        ),
-                        step=step + 1,
-                    )
-
-                # =========================================
-                # NORMAL SAVE
-                # =========================================
-
-                messages.success(
-                    request,
-                    "Job progress saved.",
-                )
-
-                return redirect(
-                    "bespoke_job_wizard",
-                    reference_number=(
-                        order.reference_number
-                    ),
-                    step=step,
-                )
-
     # =====================================================
-    # CONTACT COMMUNICATIONS
+    # REFRESH CURRENT JOB STATE
     # =====================================================
 
-    contact_communications = (
-        order.communications
-        .filter(
-            context=(
-                OrderCommunication
-                .Context
-                .CONTACT
-            )
-        )
+    design_versions = (
+        design.versions
         .select_related(
-            "logged_by"
+            "created_by",
+            "sent_by",
+        )
+        .prefetch_related(
+            "communications"
+        )
+        .order_by(
+            "-version"
+        )
+    )
+
+    latest_design_version = (
+        design.latest_version
+    )
+
+    accepted_design_version = (
+        design.accepted_version
+    )
+
+    quotes = (
+        workflow.quotes
+        .select_related(
+            "created_by"
+        )
+        .prefetch_related(
+            "lines"
+        )
+        .order_by(
+            "-version"
+        )
+    )
+
+    latest_quote = (
+        workflow.quotes
+        .order_by(
+            "-version"
+        )
+        .first()
+    )
+
+    quote_editor = get_quote_editor()
+    active_quote = get_active_quote()
+    accepted_quote = get_accepted_quote()
+    approval_payment = get_approval_payment()
+
+    # Rebuild normal quote forms after successful GET.
+    # Invalid POST forms remain populated with their errors.
+    if request.method != "POST":
+
+        if quote_editor:
+
+            quote_form = (
+                BespokeQuoteForm(
+                    instance=quote_editor
+                )
+            )
+
+            quote_line_formset = (
+                BespokeQuoteLineFormSet(
+                    instance=quote_editor,
+                    prefix="quote_lines",
+                )
+            )
+
+        else:
+
+            quote_form = BespokeQuoteForm()
+
+            quote_line_formset = (
+                BespokeQuoteLineFormSet(
+                    prefix="quote_lines",
+                )
+            )
+
+    # =====================================================
+    # PERMANENT COMMUNICATION TRAIL
+    # =====================================================
+
+    communications = (
+        order.communications
+        .select_related(
+            "logged_by",
+            "design_version",
         )
         .order_by(
             "-occurred_at",
             "-created_at",
         )
     )
-
-    # =====================================================
-    # DESIGN DATA
-    # =====================================================
-
-    design_versions = []
-
-    design_communications = []
-
-    latest_design_version = None
-
-    accepted_design_version = None
-
-    if design:
-
-        design_versions = (
-            design.versions
-            .select_related(
-                "created_by",
-                "sent_by",
-            )
-            .prefetch_related(
-                "communications"
-            )
-            .order_by(
-                "-version"
-            )
-        )
-
-        latest_design_version = (
-            design.latest_version
-        )
-
-        accepted_design_version = (
-            design.accepted_version
-        )
-
-        design_communications = (
-            order.communications
-            .filter(
-                context=(
-                    OrderCommunication
-                    .Context
-                    .DESIGN
-                )
-            )
-            .select_related(
-                "logged_by",
-                "design_version",
-            )
-            .order_by(
-                "-occurred_at",
-                "-created_at",
-            )
-        )
-
-    # =====================================================
-    # DEFAULT DESIGN EMAIL FORM
-    # =====================================================
-
-    if (
-        step == 3
-        and latest_design_version
-        and not (
-            request.method == "POST"
-            and request.POST.get(
-                "action"
-            )
-            == "send_design_version_email"
-        )
-    ):
-
-        design_version_email_form = (
-            DesignVersionEmailForm(
-                initial={
-                    "subject": (
-                        f"{latest_design_version.version_label} "
-                        f"| K9 bespoke order "
-                        f"{order.reference_number}"
-                    ),
-
-                    "message": (
-                        default_design_version_email_message(
-                            order,
-                            latest_design_version,
-                        )
-                    ),
-                }
-            )
-        )
-
-    # =====================================================
-    # QUOTE DATA
-    # =====================================================
-
-    quotes = []
-    latest_quote = None
-    active_quote = None
-    accepted_quote = None
-    quote_communications = []
-
-    if step >= 4:
-
-        quotes = (
-            workflow.quotes
-            .select_related("created_by")
-            .prefetch_related("lines")
-            .order_by("-version")
-        )
-
-        latest_quote = (
-            workflow.quotes
-            .order_by("-version")
-            .first()
-        )
-
-        active_quote = (
-            workflow.quotes
-            .filter(
-                status__in=[
-                    BespokeQuote.Status.SENT,
-                    BespokeQuote.Status.ACCEPTED,
-                ]
-            )
-            .order_by("-version")
-            .first()
-        )
-
-        accepted_quote = (
-            workflow.quotes
-            .filter(
-                status=BespokeQuote.Status.ACCEPTED
-            )
-            .order_by("-version")
-            .first()
-        )
-
-        quote_communications = (
-            order.communications
-            .filter(
-                context=(
-                    OrderCommunication.Context.QUOTE
-                )
-            )
-            .select_related("logged_by")
-            .order_by(
-                "-occurred_at",
-                "-created_at",
-            )
-        )
-
-    # =====================================================
-    # WIZARD NAVIGATION
-    # =====================================================
-
-    wizard_navigation = []
-
-    for (
-        number,
-        data,
-    ) in WIZARD_STEPS.items():
-
-        unlocked = (
-            number
-            <= workflow.current_step
-            or is_closed
-        )
-
-        # Even if legacy data says the user reached later
-        # steps, do not expose them without accepted design.
-
-        if (
-            number > 3
-            and not is_closed
-            and not accepted_design_version
-        ):
-
-            unlocked = False
-
-        if (
-            number > 4
-            and not is_closed
-            and not accepted_quote
-        ):
-
-            unlocked = False
-
-        if (
-            number > 5
-            and not is_closed
-            and (
-                not approval_payment
-                or not approval_payment.can_start_production
-            )
-        ):
-
-            unlocked = False
-
-        wizard_navigation.append(
-            {
-                "number": number,
-
-                "title": (
-                    data[
-                        "short_title"
-                    ]
-                ),
-
-                "full_title": (
-                    data[
-                        "title"
-                    ]
-                ),
-
-                "active": (
-                    number == step
-                ),
-
-                "complete": (
-                    number
-                    < workflow.current_step
-                ),
-
-                "unlocked": (
-                    unlocked
-                ),
-            }
-        )
-
-    # =====================================================
-    # PROGRESS
-    # =====================================================
-
-    progress_percent = int(
-        (
-            workflow.current_step
-            / len(WIZARD_STEPS)
-        )
-        * 100
-    )
-
-    # =====================================================
-    # ACTIVITY FEED
-    # =====================================================
 
     activity_feed = (
         build_activity_feed(
@@ -5750,163 +5260,177 @@ def bespoke_job_wizard(
     )
 
     # =====================================================
+    # SIX SIMPLE PAGE STATES
+    # =====================================================
+
+    review_complete = (
+        workflow.current_step
+        >= (
+            BespokeOrderWorkflow
+            .Step
+            .CONTACT
+        )
+        or workflow.stage
+        not in {
+            BespokeOrderWorkflow.Stage.NEW,
+            BespokeOrderWorkflow.Stage.REVIEW,
+        }
+    )
+
+    contact_complete = (
+        order.communications
+        .filter(
+            context=(
+                OrderCommunication
+                .Context
+                .CONTACT
+            )
+        )
+        .exists()
+    )
+
+    design_quote_complete = bool(
+        accepted_design_version
+        and accepted_quote
+    )
+
+    customer_acceptance_complete = bool(
+        approval_payment
+        and approval_payment.customer_approved
+        and approval_payment.payment_status
+        == (
+            BespokeApprovalPayment
+            .PaymentStatus
+            .PAID
+        )
+    )
+
+    product_made_complete = (
+        production.status
+        == (
+            BespokeProduction
+            .Status
+            .COMPLETE
+        )
+    )
+
+    sent_complete = (
+        order.status == "sent"
+        or workflow.stage
+        == (
+            BespokeOrderWorkflow
+            .Stage
+            .COMPLETED
+        )
+    )
+
+    # =====================================================
     # CONTEXT
     # =====================================================
 
     context = {
-
         "workflow": workflow,
-
         "order": order,
+        "bespoke": bespoke,
+        "is_closed": is_closed,
 
-        "form": workflow_form,
+        "workflow_form": workflow_form,
 
-        "step": step,
-
-        "step_data": (
-            WIZARD_STEPS[
-                step
-            ]
-        ),
-
-        "wizard_steps": (
-            wizard_navigation
-        ),
-
-        "progress_percent": (
-            progress_percent
-        ),
-
-        "activity_feed": (
-            activity_feed
-        ),
-
-        "is_closed": (
-            is_closed
-        ),
-
-        # ---------------------------------------------
-        # STEP 2
-        # ---------------------------------------------
-
-        "email_form": (
-            email_form
-        ),
-
-        "whatsapp_form": (
-            whatsapp_form
-        ),
-
+        "email_form": email_form,
+        "whatsapp_form": whatsapp_form,
         "communication_log_form": (
             communication_log_form
         ),
-
-        "contact_communications": (
-            contact_communications
-        ),
-
-        "whatsapp_url": (
-            whatsapp_url
-        ),
-
+        "whatsapp_url": whatsapp_url,
         "whatsapp_prepared_message": (
             whatsapp_prepared_message
         ),
-
         "whatsapp_number_available": bool(
             normalise_whatsapp_number(
                 order.phone_number
             )
         ),
 
-        # ---------------------------------------------
-        # STEP 3 - NEW VERSIONED DESIGN SYSTEM
-        # ---------------------------------------------
-
-        "design": (
-            design
-        ),
-
+        "design": design,
         "master_design_form": (
             master_design_form
         ),
-
         "design_version_form": (
             design_version_form
         ),
-
-        "design_version_email_form": (
-            design_version_email_form
-        ),
-
         "design_versions": (
             design_versions
         ),
-
         "latest_design_version": (
             latest_design_version
         ),
-
         "accepted_design_version": (
             accepted_design_version
         ),
 
-        "design_communications": (
-            design_communications
-        ),
-
-        # ---------------------------------------------
-        # STEP 4 - QUOTE SYSTEM
-        # ---------------------------------------------
-
-        "quote_form": (
-            quote_form
-        ),
-
+        "quote_form": quote_form,
         "quote_line_formset": (
             quote_line_formset
         ),
-
-        "quote_editor": (
-            quote_editor
-        ),
-
-        "quotes": (
-            quotes
-        ),
-
-        "latest_quote": (
-            latest_quote
-        ),
-
-        "active_quote": (
-            active_quote
-        ),
-
-        "accepted_quote": (
-            accepted_quote
-        ),
+        "quote_editor": quote_editor,
+        "quotes": quotes,
+        "latest_quote": latest_quote,
+        "active_quote": active_quote,
+        "accepted_quote": accepted_quote,
 
         "approval_payment": (
             approval_payment
         ),
+        "production": production,
+        "delivery": delivery,
 
-        "quote_communications": (
-            quote_communications
+        "communications": communications,
+        "activity_feed": activity_feed,
+
+        "review_complete": (
+            review_complete
         ),
-
-        # Legacy template compatibility.
-        "design_form": (
-            design_form
+        "contact_complete": (
+            contact_complete
         ),
-
-        "design_email_form": (
-            design_email_form
+        "design_quote_complete": (
+            design_quote_complete
+        ),
+        "customer_acceptance_complete": (
+            customer_acceptance_complete
+        ),
+        "product_made_complete": (
+            product_made_complete
+        ),
+        "sent_complete": (
+            sent_complete
         ),
     }
 
     return render(
         request,
-        "orders/bespoke_job_wizard.html",
+        "orders/bespoke_job_detail.html",
         context,
+    )
+
+
+# =========================================================
+# LEGACY WIZARD LINK REDIRECT
+# =========================================================
+
+@staff_member_required
+def bespoke_job_wizard(
+    request,
+    reference_number,
+    step,
+):
+    """
+    Old saved links/bookmarks still work.
+
+    The staff wizard itself is no longer used.
+    """
+
+    return redirect(
+        "bespoke_job_detail",
+        reference_number=reference_number,
     )

@@ -1,0 +1,813 @@
+{% extends "base.html" %}
+
+{% block title %}{{ order.reference_number }} | Staff Job | K9{% endblock %}
+
+{% block content %}
+<style>
+    .k9-job {
+        --k9-dark: #212529;
+        --k9-soft: #f8f9fa;
+        --k9-border: #e5e7eb;
+        --k9-muted: #6c757d;
+    }
+
+    .k9-job .job-header {
+        background: linear-gradient(135deg, #212529, #343a40);
+        color: #fff;
+        border-radius: 1rem;
+        box-shadow: 0 .4rem 1.4rem rgba(0, 0, 0, .08);
+    }
+
+    .k9-job .job-card {
+        background: #fff;
+        border: 1px solid var(--k9-border);
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 .25rem .9rem rgba(0, 0, 0, .04);
+        scroll-margin-top: 1rem;
+    }
+
+    .k9-job .job-card-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--k9-border);
+    }
+
+    .k9-job .job-card-body {
+        padding: 1.25rem;
+    }
+
+    .k9-job .section-number {
+        width: 2.4rem;
+        height: 2.4rem;
+        border-radius: .75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: #212529;
+        color: #fff;
+        font-weight: 800;
+    }
+
+    .k9-job .section-number.done {
+        background: #198754;
+    }
+
+    .k9-job .section-label {
+        font-size: .72rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        font-weight: 800;
+        color: var(--k9-muted);
+    }
+
+    .k9-job .progress-chip {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .6rem .75rem;
+        border-radius: .75rem;
+        border: 1px solid rgba(255, 255, 255, .2);
+        color: rgba(255, 255, 255, .8);
+        text-decoration: none;
+    }
+
+    .k9-job .progress-chip.done {
+        background: rgba(25, 135, 84, .35);
+        color: #fff;
+    }
+
+    .k9-job .progress-dot {
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, .15);
+        font-size: .75rem;
+        font-weight: 800;
+        flex-shrink: 0;
+    }
+
+    .k9-job .summary-box {
+        background: var(--k9-soft);
+        border: 1px solid var(--k9-border);
+        border-radius: .8rem;
+        padding: 1rem;
+        height: 100%;
+    }
+
+    .k9-job .version-card {
+        border: 1px solid var(--k9-border);
+        border-radius: .8rem;
+        padding: 1rem;
+    }
+
+    .k9-job .version-card.accepted {
+        border: 2px solid #198754;
+    }
+
+    .k9-job .timeline-item {
+        position: relative;
+        border-left: 2px solid #dee2e6;
+        padding: 0 0 1.25rem 1.4rem;
+    }
+
+    .k9-job .timeline-item::before {
+        content: "";
+        position: absolute;
+        width: .7rem;
+        height: .7rem;
+        border-radius: 50%;
+        background: #6c757d;
+        left: -.4rem;
+        top: .2rem;
+        box-shadow: 0 0 0 4px #fff;
+    }
+
+    .k9-job .timeline-item.contact::before { background: #0d6efd; }
+    .k9-job .timeline-item.design::before { background: #6f42c1; }
+    .k9-job .timeline-item.quote::before { background: #198754; }
+    .k9-job .timeline-item.production::before { background: #fd7e14; }
+    .k9-job .timeline-item.delivery::before { background: #212529; }
+
+    .k9-job .sticky-summary {
+        position: sticky;
+        top: 1rem;
+    }
+
+    .k9-job textarea { resize: vertical; }
+    .k9-job details summary { cursor: pointer; font-weight: 700; }
+    .k9-job .touch-btn { min-height: 44px; }
+
+    @media (max-width: 991.98px) {
+        .k9-job .sticky-summary { position: static; }
+        .k9-job .progress-strip {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .k9-job .progress-strip { grid-template-columns: 1fr; }
+        .k9-job .mobile-full { width: 100%; }
+    }
+</style>
+
+<div class="container-fluid container-xl py-3 py-lg-4 k9-job">
+
+    <header class="job-header p-4 mb-4" id="job-top">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+            <div>
+                <div class="text-uppercase small fw-bold text-white-50 mb-1">K9 Bespoke Job</div>
+                <h1 class="h3 fw-bold mb-1">{{ order.reference_number }}</h1>
+                <div class="text-white-50">{{ workflow.job_title }}</div>
+                <div class="small text-white-50 mt-2">
+                    {{ order.customer_name }} · {{ workflow.get_stage_display }}
+                </div>
+            </div>
+
+            <div>
+                {% if request.user.is_superuser %}
+                    <a href="{% url 'bespoke_jobs_dashboard' %}" class="btn btn-outline-light touch-btn">← Jobs</a>
+                {% else %}
+                    <a href="{% url 'staff_jobs_dashboard' %}" class="btn btn-outline-light touch-btn">← My Jobs</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <nav class="progress-strip d-flex flex-wrap gap-2 mt-4">
+            <a href="#review" class="progress-chip {% if review_complete %}done{% endif %}">
+                <span class="progress-dot">{% if review_complete %}✓{% else %}1{% endif %}</span> Review
+            </a>
+            <a href="#contact" class="progress-chip {% if contact_complete %}done{% endif %}">
+                <span class="progress-dot">{% if contact_complete %}✓{% else %}2{% endif %}</span> Contact
+            </a>
+            <a href="#design-quote" class="progress-chip {% if design_quote_complete %}done{% endif %}">
+                <span class="progress-dot">{% if design_quote_complete %}✓{% else %}3{% endif %}</span> Design + Quote
+            </a>
+            <a href="#acceptance" class="progress-chip {% if customer_acceptance_complete %}done{% endif %}">
+                <span class="progress-dot">{% if customer_acceptance_complete %}✓{% else %}4{% endif %}</span> Customer Accepts
+            </a>
+            <a href="#production" class="progress-chip {% if product_made_complete %}done{% endif %}">
+                <span class="progress-dot">{% if product_made_complete %}✓{% else %}5{% endif %}</span> Product Made
+            </a>
+            <a href="#dispatch" class="progress-chip {% if sent_complete %}done{% endif %}">
+                <span class="progress-dot">{% if sent_complete %}✓{% else %}6{% endif %}</span> Sent / Finished
+            </a>
+        </nav>
+    </header>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'info' %}alert-info{% else %}alert-success{% endif %} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        <main class="col-lg-8">
+
+            <!-- 1 REVIEW -->
+            <section class="job-card mb-4" id="review">
+                <div class="job-card-header d-flex align-items-center gap-3">
+                    <div class="section-number {% if review_complete %}done{% endif %}">{% if review_complete %}✓{% else %}1{% endif %}</div>
+                    <div>
+                        <div class="section-label">Review</div>
+                        <h2 class="h5 fw-bold mb-0">Customer Request</h2>
+                    </div>
+                </div>
+
+                <div class="job-card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="summary-box">
+                                <div class="small text-muted">Customer</div>
+                                <div class="fw-bold">{{ order.customer_name }}</div>
+                                <div class="small text-break">{{ order.customer_email }}</div>
+                                {% if order.phone_number %}<div class="small">{{ order.phone_number }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="summary-box">
+                                <div class="small text-muted">Request</div>
+                                <div class="fw-bold">{{ workflow.job_title }}</div>
+                                {% if bespoke.reference %}<div class="small text-muted">{{ bespoke.reference }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if bespoke %}
+                        <div class="summary-box mb-3">
+                            <div class="section-label mb-2">Original Request</div>
+                            {{ bespoke.description|default:"Not provided"|linebreaksbr }}
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="summary-box">
+                                    <div class="small text-muted">Colours</div>
+                                    {{ bespoke.colours|default:"Not provided" }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="summary-box">
+                                    <div class="small text-muted">Things to avoid</div>
+                                    {{ bespoke.avoid|default:"Not provided"|linebreaksbr }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if not is_closed %}
+                        <form method="post" action="{% url 'bespoke_job_wizard' order.reference_number 1 %}">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    {{ workflow_form.priority.label_tag }}
+                                    {{ workflow_form.priority }}
+                                </div>
+                                <div class="col-md-8">
+                                    {{ workflow_form.next_action.label_tag }}
+                                    {{ workflow_form.next_action }}
+                                </div>
+                                <div class="col-12">
+                                    {{ workflow_form.staff_summary.label_tag }}
+                                    {{ workflow_form.staff_summary }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ workflow_form.next_action_due.label_tag }}
+                                    {{ workflow_form.next_action_due }}
+                                </div>
+                                <div class="col-md-6 d-flex align-items-end">
+                                    <div class="form-check mb-2">
+                                        {{ workflow_form.customer_waiting }}
+                                        <label class="form-check-label" for="{{ workflow_form.customer_waiting.id_for_label }}">Waiting for Customer</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-column flex-sm-row gap-2 mt-3">
+                                <button type="submit" name="action" value="save" class="btn btn-outline-dark touch-btn">Save Notes</button>
+                                {% if not review_complete %}
+                                    <button type="submit" name="action" value="save_continue" class="btn btn-dark touch-btn ms-sm-auto">Mark Reviewed →</button>
+                                {% endif %}
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- 2 CONTACT -->
+            <section class="job-card mb-4" id="contact">
+                <div class="job-card-header d-flex align-items-center gap-3">
+                    <div class="section-number {% if contact_complete %}done{% endif %}">{% if contact_complete %}✓{% else %}2{% endif %}</div>
+                    <div>
+                        <div class="section-label">Contact</div>
+                        <h2 class="h5 fw-bold mb-0">Customer Communication</h2>
+                    </div>
+                </div>
+
+                <div class="job-card-body">
+                    {% if not is_closed %}
+                        <div class="accordion" id="contactAccordion">
+                            <div class="accordion-item">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#emailPanel">✉ Email Customer</button>
+                                </h3>
+                                <div id="emailPanel" class="accordion-collapse collapse show" data-bs-parent="#contactAccordion">
+                                    <div class="accordion-body">
+                                        <form method="post" enctype="multipart/form-data" action="{% url 'bespoke_job_wizard' order.reference_number 2 %}">
+                                            {% csrf_token %}
+                                            <div class="mb-3">{{ email_form.subject.label_tag }}{{ email_form.subject }}</div>
+                                            <div class="mb-3">{{ email_form.message.label_tag }}{{ email_form.message }}</div>
+                                            <div class="mb-3">{{ email_form.attachment.label_tag }}{{ email_form.attachment }}</div>
+                                            <button type="submit" name="action" value="send_email" class="btn btn-dark touch-btn">Send Email</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#whatsappPanel">WhatsApp</button>
+                                </h3>
+                                <div id="whatsappPanel" class="accordion-collapse collapse" data-bs-parent="#contactAccordion">
+                                    <div class="accordion-body">
+                                        {% if whatsapp_number_available %}
+                                            <form method="post" action="{% url 'bespoke_job_detail' order.reference_number %}">
+                                                {% csrf_token %}
+                                                {{ whatsapp_form.message }}
+                                                <button type="submit" name="action" value="prepare_whatsapp" class="btn btn-outline-success touch-btn mt-3">Prepare WhatsApp</button>
+                                            </form>
+                                            {% if whatsapp_url %}
+                                                <hr>
+                                                <div class="d-grid gap-2">
+                                                    <a href="{{ whatsapp_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-success touch-btn">Open WhatsApp</a>
+                                                    <form method="post" action="{% url 'bespoke_job_detail' order.reference_number %}">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="whatsapp_message" value="{{ whatsapp_prepared_message }}">
+                                                        <button type="submit" name="action" value="log_whatsapp_sent" class="btn btn-dark touch-btn w-100">Confirm Sent</button>
+                                                    </form>
+                                                </div>
+                                            {% endif %}
+                                        {% else %}
+                                            <div class="alert alert-warning mb-0">No valid WhatsApp number available.</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#manualPanel">☎ Log Call / Conversation</button>
+                                </h3>
+                                <div id="manualPanel" class="accordion-collapse collapse" data-bs-parent="#contactAccordion">
+                                    <div class="accordion-body">
+                                        <form method="post" action="{% url 'bespoke_job_wizard' order.reference_number 2 %}">
+                                            {% csrf_token %}
+                                            <div class="row g-3">
+                                                <div class="col-md-6">{{ communication_log_form.channel.label_tag }}{{ communication_log_form.channel }}</div>
+                                                <div class="col-md-6">{{ communication_log_form.direction.label_tag }}{{ communication_log_form.direction }}</div>
+                                                <div class="col-12">{{ communication_log_form.summary.label_tag }}{{ communication_log_form.summary }}</div>
+                                                <div class="col-12">{{ communication_log_form.content.label_tag }}{{ communication_log_form.content }}</div>
+                                                <div class="col-md-7">{{ communication_log_form.occurred_at.label_tag }}{{ communication_log_form.occurred_at }}</div>
+                                            </div>
+                                            <button type="submit" name="action" value="log_communication" class="btn btn-dark touch-btn mt-3">Save Communication</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- 3 DESIGN + QUOTE -->
+            <section class="job-card mb-4" id="design-quote">
+                <div class="job-card-header d-flex align-items-center gap-3">
+                    <div class="section-number {% if design_quote_complete %}done{% endif %}">{% if design_quote_complete %}✓{% else %}3{% endif %}</div>
+                    <div>
+                        <div class="section-label">Design + Quote</div>
+                        <h2 class="h5 fw-bold mb-0">Create, Revise & Price</h2>
+                    </div>
+                </div>
+
+                <div class="job-card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                        <div>
+                            <div class="section-label">Design</div>
+                            <h3 class="h6 fw-bold mb-0">Design Brief & Attempts</h3>
+                        </div>
+                        {% if accepted_design_version %}<span class="badge text-bg-success">✓ {{ accepted_design_version.version_label }} Accepted</span>{% endif %}
+                    </div>
+
+                    {% if not is_closed %}
+                        <form method="post" action="{% url 'bespoke_job_wizard' order.reference_number 3 %}" class="mb-4">
+                            {% csrf_token %}
+                            <div class="mb-3">{{ master_design_form.specification.label_tag }}{{ master_design_form.specification }}</div>
+                            <div class="mb-3">{{ master_design_form.internal_notes.label_tag }}{{ master_design_form.internal_notes }}</div>
+                            <button type="submit" name="action" value="save_design_master" class="btn btn-outline-dark touch-btn">Save Design Brief</button>
+                        </form>
+
+                        <details class="mb-4" {% if not design_versions %}open{% endif %}>
+                            <summary>+ Create {% if latest_design_version %}Design V{{ latest_design_version.version|add:"1" }}{% else %}Design V1{% endif %}</summary>
+                            <div class="border rounded-3 p-3 mt-3">
+                                <form method="post" action="{% url 'bespoke_job_wizard' order.reference_number 3 %}">
+                                    {% csrf_token %}
+                                    <div class="mb-3">{{ design_version_form.title.label_tag }}{{ design_version_form.title }}</div>
+                                    <div class="mb-3">{{ design_version_form.customer_summary.label_tag }}{{ design_version_form.customer_summary }}</div>
+                                    <div class="mb-3">{{ design_version_form.change_summary.label_tag }}{{ design_version_form.change_summary }}</div>
+                                    <div class="mb-3">{{ design_version_form.staff_notes.label_tag }}{{ design_version_form.staff_notes }}</div>
+                                    <button type="submit" name="action" value="create_design_version" class="btn btn-dark touch-btn">Create Design Attempt</button>
+                                </form>
+                            </div>
+                        </details>
+                    {% endif %}
+
+                    <div class="d-grid gap-3 mb-4">
+                        {% for version in design_versions %}
+                            <article class="version-card {% if version.status == 'accepted' %}accepted{% endif %}">
+                                <div class="d-flex justify-content-between gap-2 flex-wrap">
+                                    <div>
+                                        <div class="section-label">{{ version.version_label }}</div>
+                                        <div class="fw-bold">{{ version.title|default:"Untitled Design" }}</div>
+                                        <div class="small text-muted">{{ version.created_at|date:"d M Y H:i" }}</div>
+                                    </div>
+                                    <div>
+                                        {% if version.status == 'accepted' %}<span class="badge text-bg-success">Accepted</span>
+                                        {% elif version.status == 'rejected' %}<span class="badge text-bg-warning">Changes Requested</span>
+                                        {% elif version.status == 'sent' %}<span class="badge text-bg-primary">Sent</span>
+                                        {% elif version.status == 'superseded' %}<span class="badge text-bg-secondary">Superseded</span>
+                                        {% else %}<span class="badge text-bg-light border text-dark">Draft</span>{% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">{{ version.customer_summary|linebreaksbr }}</div>
+                                {% if version.change_summary %}<div class="small text-muted mt-2"><strong>Changes:</strong> {{ version.change_summary|linebreaksbr }}</div>{% endif %}
+                                {% if version.response_notes %}<div class="alert alert-info small mt-3 mb-0"><strong>Customer:</strong> {{ version.response_notes|linebreaksbr }}</div>{% endif %}
+
+                                {% if not is_closed %}
+                                    {% if version.status == 'draft' %}
+                                        <details class="mt-3">
+                                            <summary>Edit Draft</summary>
+                                            <form method="post" action="{% url 'bespoke_job_wizard' order.reference_number 3 %}" class="mt-3">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="design_version_id" value="{{ version.id }}">
+                                                <div class="mb-2"><label class="form-label">Title</label><input type="text" name="title" class="form-control" value="{{ version.title }}"></div>
+                                                <div class="mb-2"><label class="form-label">Customer Description</label><textarea name="customer_summary" class="form-control" rows="5" required>{{ version.customer_summary }}</textarea></div>
+                                                <div class="mb-2"><label class="form-label">Changes</label><textarea name="change_summary" class="form-control" rows="3">{{ version.change_summary }}</textarea></div>
+                                                <div class="mb-2"><label class="form-label">Staff Notes</label><textarea name="staff_notes" class="form-control" rows="3">{{ version.staff_notes }}</textarea></div>
+                                                <button type="submit" name="action" value="save_design_version" class="btn btn-outline-dark touch-btn">Save Draft</button>
+                                            </form>
+                                        </details>
+                                    {% endif %}
+
+                                    {% if version.status == 'draft' or version.status == 'sent' %}
+                                        <details class="mt-3">
+                                            <summary>{% if version.status == 'sent' %}Resend Design{% else %}Send Design for Review{% endif %}</summary>
+                                            <form method="post" enctype="multipart/form-data" action="{% url 'bespoke_job_wizard' order.reference_number 3 %}" class="mt-3">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="design_version_id" value="{{ version.id }}">
+                                                <div class="mb-2"><label class="form-label">Email Subject</label><input type="text" name="subject" class="form-control" value="{{ version.version_label }} | K9 bespoke order {{ order.reference_number }}" required></div>
+                                                <div class="mb-2"><label class="form-label">Message</label><textarea name="message" class="form-control" rows="6" required>Hi {{ order.customer_name }},
+
+We've prepared {{ version.version_label }} for your bespoke order {{ order.reference_number }}.
+
+{{ version.customer_summary }}
+
+Please review the attached design and use the Review This Design button in the email.</textarea></div>
+                                                <div class="mb-3"><label class="form-label">Attach Design File</label><input type="file" name="attachment" class="form-control" accept=".jpg,.jpeg,.png,.webp,.heic,.pdf,.doc,.docx,.txt,.mp4,.mov,.m4v"></div>
+                                                <button type="submit" name="action" value="send_design_version_email" class="btn btn-dark touch-btn">{% if version.status == 'sent' %}Resend Design{% else %}Send for Review{% endif %}</button>
+                                            </form>
+                                        </details>
+                                    {% endif %}
+                                {% endif %}
+                            </article>
+                        {% empty %}
+                            <div class="small text-muted">No design attempts yet.</div>
+                        {% endfor %}
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between align-items-start gap-2 my-3">
+                        <div>
+                            <div class="section-label">Quote</div>
+                            <h3 class="h6 fw-bold mb-0">Pricing & Quote</h3>
+                        </div>
+                        {% if accepted_quote %}<span class="badge text-bg-success">✓ Quote V{{ accepted_quote.version }} Accepted</span>{% endif %}
+                    </div>
+
+                    {% if not accepted_design_version %}
+                        <div class="alert alert-warning">The customer must accept a design before a quote can be prepared.</div>
+                    {% elif not is_closed %}
+                        <form method="post" action="{% url 'bespoke_job_wizard' order.reference_number 4 %}" id="quote-builder-form">
+                            {% csrf_token %}
+                            {{ quote_line_formset.management_form }}
+                            {% if quote_editor %}<input type="hidden" name="quote_id" value="{{ quote_editor.id }}">{% endif %}
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-7">{{ quote_form.title.label_tag }}{{ quote_form.title }}</div>
+                                <div class="col-md-5">{{ quote_form.delivery_cost.label_tag }}{{ quote_form.delivery_cost }}</div>
+                                <div class="col-12">{{ quote_form.notes.label_tag }}{{ quote_form.notes }}</div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong>Quote Items</strong>
+                                <button type="button" id="add-quote-line" class="btn btn-sm btn-outline-dark">+ Add Item</button>
+                            </div>
+
+                            <div id="quote-lines-container" class="d-grid gap-2 mb-3">
+                                {% for line_form in quote_line_formset %}
+                                    <div class="border rounded-3 p-3" data-quote-line>
+                                        {% for hidden in line_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                        <div class="row g-2">
+                                            <div class="col-md-6">{{ line_form.description.label_tag }}{{ line_form.description }}</div>
+                                            <div class="col-6 col-md-2">{{ line_form.quantity.label_tag }}{{ line_form.quantity }}</div>
+                                            <div class="col-6 col-md-2">{{ line_form.unit_price.label_tag }}{{ line_form.unit_price }}</div>
+                                            <div class="col-md-2"><label class="form-label">Total</label><div class="form-control bg-light" data-line-total>{% if line_form.instance.pk %}£{{ line_form.instance.line_total|floatformat:2 }}{% else %}£0.00{% endif %}</div></div>
+                                        </div>
+                                        {{ line_form.sort_order }}
+                                        {% if line_form.DELETE %}<div class="form-check mt-2">{{ line_form.DELETE }} <label class="form-check-label text-danger small">Remove</label></div>{% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <template id="quote-line-empty-template">
+                                <div class="border rounded-3 p-3" data-quote-line>
+                                    {% for hidden in quote_line_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                    <div class="row g-2">
+                                        <div class="col-md-6">{{ quote_line_formset.empty_form.description.label_tag }}{{ quote_line_formset.empty_form.description }}</div>
+                                        <div class="col-6 col-md-2">{{ quote_line_formset.empty_form.quantity.label_tag }}{{ quote_line_formset.empty_form.quantity }}</div>
+                                        <div class="col-6 col-md-2">{{ quote_line_formset.empty_form.unit_price.label_tag }}{{ quote_line_formset.empty_form.unit_price }}</div>
+                                        <div class="col-md-2"><label class="form-label">Total</label><div class="form-control bg-light" data-line-total>£0.00</div></div>
+                                    </div>
+                                    {{ quote_line_formset.empty_form.sort_order }}
+                                    {{ quote_line_formset.empty_form.DELETE }}
+                                </div>
+                            </template>
+
+                            <div class="border rounded-3 bg-light p-3 mb-3">
+                                <div class="form-check form-switch mb-3">{{ quote_form.vat_enabled }} <label class="form-check-label" for="{{ quote_form.vat_enabled.id_for_label }}">Apply VAT</label></div>
+                                <div class="row g-3" id="vat-settings-fields">
+                                    <div class="col-md-6">{{ quote_form.vat_rate.label_tag }}{{ quote_form.vat_rate }}</div>
+                                    <div class="col-md-6 d-flex align-items-end"><div class="form-check mb-2">{{ quote_form.vat_on_delivery }} <label class="form-check-label" for="{{ quote_form.vat_on_delivery.id_for_label }}">VAT on delivery</label></div></div>
+                                </div>
+                            </div>
+
+                            <div class="bg-dark text-white rounded-3 p-3 mb-3">
+                                <div class="d-flex justify-content-between"><span>Subtotal</span><strong id="quote-live-subtotal">£0.00</strong></div>
+                                <div class="d-flex justify-content-between mt-1"><span>Delivery</span><strong id="quote-live-delivery">£0.00</strong></div>
+                                <div class="d-flex justify-content-between mt-1" id="quote-live-vat-row"><span id="quote-live-vat-label">VAT</span><strong id="quote-live-vat">£0.00</strong></div>
+                                <hr><div class="d-flex justify-content-between fs-5"><strong>Total</strong><strong id="quote-live-total">£0.00</strong></div>
+                            </div>
+
+                            <button type="submit" name="action" value="{% if quote_editor %}save_quote{% else %}create_quote{% endif %}" class="btn btn-dark touch-btn">{% if quote_editor %}Save Quote V{{ quote_editor.version }}{% else %}Create Quote{% endif %}</button>
+                        </form>
+                    {% endif %}
+
+                    <div class="d-grid gap-3 mt-4">
+                        {% for quote in quotes %}
+                            <article class="version-card {% if quote.status == 'accepted' %}accepted{% endif %}">
+                                <div class="d-flex justify-content-between gap-2 flex-wrap">
+                                    <div><div class="section-label">Quote V{{ quote.version }}</div><div class="fw-bold">{{ quote.title }}</div><div class="small text-muted">£{{ quote.total|floatformat:2 }}</div></div>
+                                    <div>{% if quote.status == 'accepted' %}<span class="badge text-bg-success">Accepted</span>{% elif quote.status == 'sent' %}<span class="badge text-bg-primary">Sent</span>{% elif quote.status == 'superseded' %}<span class="badge text-bg-secondary">Superseded</span>{% else %}<span class="badge text-bg-light border text-dark">Draft</span>{% endif %}</div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    <a href="{% url 'bespoke_quote_pdf' quote.id %}" target="_blank" class="btn btn-sm btn-outline-dark">View PDF</a>
+                                    {% if not is_closed %}
+                                        {% if quote.status == 'draft' or quote.status == 'sent' %}
+                                            <details class="w-100 mt-2">
+                                                <summary>{% if quote.status == 'sent' %}Resend Quote{% else %}Send Quote{% endif %}</summary>
+                                                <form method="post" action="{% url 'bespoke_job_wizard' order.reference_number 4 %}" class="mt-3">
+                                                    {% csrf_token %}<input type="hidden" name="quote_id" value="{{ quote.id }}">
+                                                    <div class="mb-2"><label class="form-label">Subject</label><input type="text" name="subject" class="form-control" value="Quote V{{ quote.version }} | K9 bespoke order {{ order.reference_number }}"></div>
+                                                    <div class="mb-2"><label class="form-label">Message</label><textarea name="message" class="form-control" rows="5">Hi {{ order.customer_name }},
+
+We've prepared Quote V{{ quote.version }} for your bespoke order {{ order.reference_number }}.
+
+Please review the quotation and use the approval button when you're happy to proceed.</textarea></div>
+                                                    <button type="submit" name="action" value="send_quote_email" class="btn btn-dark touch-btn">Send Quote</button>
+                                                </form>
+                                            </details>
+                                        {% endif %}
+                                        {% if quote.status != 'draft' %}
+                                            <form method="post" action="{% url 'bespoke_job_wizard' order.reference_number 4 %}">
+                                                {% csrf_token %}<input type="hidden" name="quote_id" value="{{ quote.id }}">
+                                                <button type="submit" name="action" value="create_quote_revision" class="btn btn-sm btn-outline-secondary">Create Revision</button>
+                                            </form>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% empty %}<div class="small text-muted">No quotes yet.</div>{% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4 ACCEPTANCE -->
+            <section class="job-card mb-4" id="acceptance">
+                <div class="job-card-header d-flex align-items-center gap-3">
+                    <div class="section-number {% if customer_acceptance_complete %}done{% endif %}">{% if customer_acceptance_complete %}✓{% else %}4{% endif %}</div>
+                    <div><div class="section-label">Customer Accepts</div><h2 class="h5 fw-bold mb-0">Approval & Payment</h2></div>
+                </div>
+                <div class="job-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4"><div class="summary-box"><div class="small text-muted">Design</div>{% if accepted_design_version %}<div class="fw-bold text-success">✓ {{ accepted_design_version.version_label }}</div>{% else %}<div class="fw-bold text-muted">Not accepted</div>{% endif %}</div></div>
+                        <div class="col-md-4"><div class="summary-box"><div class="small text-muted">Quote</div>{% if accepted_quote %}<div class="fw-bold text-success">✓ Quote V{{ accepted_quote.version }}</div><div class="small">£{{ accepted_quote.total|floatformat:2 }}</div>{% elif active_quote %}<div class="fw-bold text-primary">Waiting for customer</div>{% else %}<div class="fw-bold text-muted">Not accepted</div>{% endif %}</div></div>
+                        <div class="col-md-4"><div class="summary-box"><div class="small text-muted">Payment</div>{% if approval_payment %}<div class="fw-bold {% if approval_payment.payment_status == 'paid' %}text-success{% endif %}">{{ approval_payment.get_payment_status_display }}</div>{% else %}<div class="fw-bold text-muted">Not ready</div>{% endif %}</div></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5 PRODUCT MADE -->
+            <section class="job-card mb-4" id="production">
+                <div class="job-card-header d-flex align-items-center gap-3">
+                    <div class="section-number {% if product_made_complete %}done{% endif %}">{% if product_made_complete %}✓{% else %}5{% endif %}</div>
+                    <div><div class="section-label">Product Made</div><h2 class="h5 fw-bold mb-0">Production Complete</h2></div>
+                </div>
+                <div class="job-card-body">
+                    {% if product_made_complete %}
+                        <div class="alert alert-success mb-0">✓ Product marked as made{% if production.completed_at %} on {{ production.completed_at|date:"d M Y H:i" }}{% endif %}.</div>
+                    {% elif customer_acceptance_complete and not is_closed %}
+                        <form method="post" action="{% url 'bespoke_job_detail' order.reference_number %}">
+                            {% csrf_token %}<button type="submit" name="action" value="mark_product_made" class="btn btn-success btn-lg touch-btn">✓ Mark Product as Made</button>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-secondary mb-0">Available after the quote is accepted and payment is confirmed.</div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- 6 DISPATCH -->
+            <section class="job-card mb-4" id="dispatch">
+                <div class="job-card-header d-flex align-items-center gap-3">
+                    <div class="section-number {% if sent_complete %}done{% endif %}">{% if sent_complete %}✓{% else %}6{% endif %}</div>
+                    <div><div class="section-label">Product Sent</div><h2 class="h5 fw-bold mb-0">Dispatch & Finish Job</h2></div>
+                </div>
+                <div class="job-card-body">
+                    {% if sent_complete %}
+                        <div class="alert alert-success mb-0">✓ Job completed.{% if order.tracking_number %} Tracking: <strong>{{ order.tracking_number }}</strong>{% endif %}</div>
+                    {% elif product_made_complete and not is_closed %}
+                        <button type="button" class="btn btn-dark btn-lg touch-btn" data-bs-toggle="modal" data-bs-target="#dispatchModal">📦 Mark Sent & Complete</button>
+                    {% else %}
+                        <div class="alert alert-secondary mb-0">Mark the product as made before completing dispatch.</div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <!-- TIMELINE -->
+            <section class="job-card mb-4" id="timeline">
+                <div class="job-card-header"><div class="section-label">Permanent Job History</div><h2 class="h5 fw-bold mb-0">Communication Trail</h2></div>
+                <div class="job-card-body">
+                    {% for communication in communications %}
+                        <div class="timeline-item {{ communication.context }}">
+                            <div class="d-flex justify-content-between gap-2 flex-wrap">
+                                <div>
+                                    <strong>{% if communication.design_version %}🎨 {{ communication.design_version.version_label }} · {% endif %}{{ communication.summary|default:communication.get_context_display }}</strong>
+                                    <div class="small text-muted">{{ communication.get_context_display }} · {{ communication.get_channel_display }} · {{ communication.get_status_display }}</div>
+                                </div>
+                                <div class="small text-muted">{{ communication.occurred_at|date:"d M Y H:i" }}</div>
+                            </div>
+                            {% if communication.content %}<div class="small mt-2">{{ communication.content|linebreaksbr }}</div>{% endif %}
+                            {% if communication.attachment_names %}<div class="small text-muted mt-2">📎 {{ communication.attachment_names|join:", " }}</div>{% endif %}
+                        </div>
+                    {% empty %}<div class="text-muted">No communication history yet.</div>{% endfor %}
+                </div>
+            </section>
+        </main>
+
+        <aside class="col-lg-4">
+            <div class="sticky-summary">
+                <div class="job-card mb-4">
+                    <div class="job-card-header"><div class="section-label">At a Glance</div><h2 class="h6 fw-bold mb-0">Job Summary</h2></div>
+                    <div class="job-card-body">
+                        <div class="summary-box mb-2"><div class="small text-muted">Customer</div><div class="fw-bold">{{ order.customer_name }}</div></div>
+                        <div class="summary-box mb-2"><div class="small text-muted">Assigned To</div><div class="fw-bold">{% if workflow.assigned_to %}{{ workflow.assigned_to.get_full_name|default:workflow.assigned_to.username }}{% else %}Unassigned{% endif %}</div></div>
+                        <div class="summary-box mb-2"><div class="small text-muted">Priority</div><div class="fw-bold">{{ workflow.get_priority_display }}</div></div>
+                        <div class="summary-box"><div class="small text-muted">Status</div><div class="fw-bold">{{ workflow.get_stage_display }}</div></div>
+                    </div>
+                </div>
+
+                <div class="job-card">
+                    <div class="job-card-header"><div class="section-label">Latest</div><h2 class="h6 fw-bold mb-0">Recent Activity</h2></div>
+                    <div class="job-card-body">
+                        {% for item in activity_feed|slice:":8" %}
+                            <div class="small border-bottom pb-2 mb-2">
+                                <div class="text-muted">{{ item.timestamp|date:"d M Y H:i" }}</div>
+                                {% if item.kind == 'note' %}{{ item.note.content|truncatechars:120 }}{% else %}{% if item.communication.design_version %}<strong>{{ item.communication.design_version.version_label }}</strong> · {% endif %}{{ item.communication.summary|default:item.communication.content|truncatechars:120 }}{% endif %}
+                            </div>
+                        {% empty %}<div class="small text-muted">No activity yet.</div>{% endfor %}
+                        <a href="#timeline" class="btn btn-sm btn-outline-dark w-100 mt-2">View Full Trail</a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<div class="modal fade" id="dispatchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="{% url 'bespoke_job_detail' order.reference_number %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h2 class="modal-title h5">Product Sent / Complete Job</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Add a tracking number if one is available. It is <strong>not required</strong>.</p>
+                    <label for="trackingNumber" class="form-label fw-semibold">Tracking Number</label>
+                    <input type="text" id="trackingNumber" name="tracking_number" class="form-control" value="{{ delivery.tracking_number|default:'' }}" placeholder="Optional">
+                    <div class="form-text">Leave this blank and you can still complete the job.</div>
+                    <input type="hidden" name="action" value="complete_dispatch">
+                </div>
+                <div class="modal-footer d-flex flex-column flex-sm-row gap-2">
+                    <button type="button" class="btn btn-outline-secondary mobile-full" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark mobile-full">Complete Job</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const quoteForm = document.getElementById("quote-builder-form");
+    if (!quoteForm) return;
+
+    const container = document.getElementById("quote-lines-container");
+    const addButton = document.getElementById("add-quote-line");
+    const template = document.getElementById("quote-line-empty-template");
+    const totalFormsInput = document.getElementById("id_quote_lines-TOTAL_FORMS");
+    const deliveryInput = quoteForm.querySelector(".quote-delivery-cost");
+    const vatEnabledInput = quoteForm.querySelector(".quote-vat-enabled");
+    const vatRateInput = quoteForm.querySelector(".quote-vat-rate");
+    const vatDeliveryInput = quoteForm.querySelector(".quote-vat-on-delivery");
+    const subtotalDisplay = document.getElementById("quote-live-subtotal");
+    const deliveryDisplay = document.getElementById("quote-live-delivery");
+    const vatDisplay = document.getElementById("quote-live-vat");
+    const vatLabel = document.getElementById("quote-live-vat-label");
+    const vatRow = document.getElementById("quote-live-vat-row");
+    const totalDisplay = document.getElementById("quote-live-total");
+
+    const num = input => {
+        if (!input) return 0;
+        const value = parseFloat(input.value);
+        return Number.isFinite(value) ? value : 0;
+    };
+    const money = value => "£" + value.toFixed(2);
+
+    function calculate() {
+        let subtotal = 0;
+        container.querySelectorAll("[data-quote-line]").forEach(row => {
+            const del = row.querySelector('input[name$="-DELETE"]');
+            const total = del && del.checked ? 0 : num(row.querySelector(".quote-quantity")) * num(row.querySelector(".quote-unit-price"));
+            const display = row.querySelector("[data-line-total]");
+            if (display) display.textContent = money(total);
+            subtotal += total;
+        });
+
+        const delivery = num(deliveryInput);
+        const enabled = vatEnabledInput && vatEnabledInput.checked;
+        const rate = num(vatRateInput);
+        const vatBase = subtotal + ((vatDeliveryInput && vatDeliveryInput.checked) ? delivery : 0);
+        const vat = enabled ? vatBase * rate / 100 : 0;
+
+        subtotalDisplay.textContent = money(subtotal);
+        deliveryDisplay.textContent = money(delivery);
+        vatDisplay.textContent = money(vat);
+        totalDisplay.textContent = money(subtotal + delivery + vat);
+        vatRow.style.display = enabled ? "" : "none";
+        vatLabel.textContent = "VAT @ " + rate.toFixed(2) + "%";
+    }
+
+    function wire(scope) {
+        scope.querySelectorAll("input").forEach(input => {
+            input.addEventListener("input", calculate);
+            input.addEventListener("change", calculate);
+        });
+    }
+
+    if (addButton && template && totalFormsInput) {
+        addButton.addEventListener("click", function () {
+            const index = parseInt(totalFormsInput.value, 10);
+            const wrapper = document.createElement("div");
+            wrapper.innerHTML = template.innerHTML.replace(/__prefix__/g, index).trim();
+            const row = wrapper.firstElementChild;
+            container.appendChild(row);
+            totalFormsInput.value = index + 1;
+            wire(row);
+            calculate();
+        });
+    }
+
+    wire(quoteForm);
+    calculate();
+});
+</script>
+{% endblock %}
